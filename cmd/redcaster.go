@@ -2,8 +2,6 @@ package main
 
 import (
 	rp "github.com/rebay1982/redpix"
-	"time"
-	//"fmt"
 )
 
 const (
@@ -15,7 +13,7 @@ const (
 )
 
 type Game struct {
-	playerX, payerY float64
+	playerX, playerY float64
 	clear bool
 }
 
@@ -45,7 +43,6 @@ var gameMap = [16][16]int{
 }
 
 func (g *Game) update() {
-	time.Sleep(1 * time.Second)
 	g.clear = !g.clear
 }
 
@@ -81,15 +78,25 @@ func (r Renderer) drawFloor() {
 }
 
 func (r Renderer) drawVertical(x int) {
-	height := FB_HEIGHT / 2
-	startHeight := (FB_HEIGHT - height) >> 1
+	h := r.calculateHeight(x)
+	startHeight := (FB_HEIGHT - h) >> 1
 
-	for y := startHeight; y < (startHeight + height); y++ {
+	for y := startHeight; y < (startHeight + h); y++ {
 		colorIndex := (x + y * FB_WIDTH) * 4
 		r.frameBuffer[colorIndex + 1] = 0xFF	// Green component
 		r.frameBuffer[colorIndex + 2] = 0xFF	// Blue component
 		r.frameBuffer[colorIndex + 3] = 0xFF  // Alpha
 	}
+}
+
+func (r Renderer) calculateHeight(x int) int {
+	posX, posY := r.game.playerX, r.game.playerY
+
+	if posY >= 0 && posX >= 0 && x >= 0 {
+		return FB_HEIGHT >> 1
+	}
+
+	return FB_HEIGHT >> 1
 }
 
 func (r *Renderer) clearFrameBuffer() {
