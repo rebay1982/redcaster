@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	rp "github.com/rebay1982/redpix"
 )
 
@@ -13,8 +15,9 @@ const (
 )
 
 type Game struct {
-	playerX, playerY float64
-	clear bool
+	playerX, playerY float64 
+	playerAngle float64
+	fov float64
 }
 
 type Renderer struct {
@@ -43,7 +46,51 @@ var gameMap = [16][16]int{
 }
 
 func (g *Game) update() {
-	g.clear = !g.clear
+
+}
+
+func (r Renderer) calculateHeight(x int) int {
+	rayAngle := r.calculateRayAngle(x)
+
+	// Vertical line collision check
+
+	// While collision with wall (vertical) 
+
+	// Horizontal line collision check
+	posX, posY := r.game.playerX, r.game.playerY
+	if posY >= 0 && posX >= 0 && x >= 0 {
+		return FB_HEIGHT >> 1
+	}
+
+	return FB_HEIGHT >> 1
+}
+
+/*
+Reference for RayAngle:
+
+				90
+				|
+ 180 ---+--- 0/360
+ 				|
+			 270
+
+*/
+func (r Renderer) calculateRayAngle(x int) float64 {
+	pAng := r.game.playerAngle
+
+	xAngleRatio := r.game.fov / float64(FB_WIDTH)
+	rayAngle := pAng + r.game.fov - xAngleRatio * float64(x)
+
+	if rayAngle < 0 {
+		rayAngle += 360
+	}
+
+	return rayAngle
+}
+
+func (r Renderer) checkWallCollision(x, y float64) bool {
+
+	return false
 }
 
 func NewRenderer(game *Game) *Renderer{
@@ -89,16 +136,6 @@ func (r Renderer) drawVertical(x int) {
 	}
 }
 
-func (r Renderer) calculateHeight(x int) int {
-	posX, posY := r.game.playerX, r.game.playerY
-
-	if posY >= 0 && posX >= 0 && x >= 0 {
-		return FB_HEIGHT >> 1
-	}
-
-	return FB_HEIGHT >> 1
-}
-
 func (r *Renderer) clearFrameBuffer() {
 	r.frameBuffer[0] = 0x00
 	for i := 1; i < len(r.frameBuffer); i = i << 1 {
@@ -113,6 +150,7 @@ func (r Renderer) draw() []uint8 {
 	r.drawFloor()
 	
 	// Draw walls
+	//fmt.Println("Rendering screen: ")
 	for x := 0; x < FB_WIDTH; x++ {
 		r.drawVertical(x)
 	}
@@ -121,7 +159,12 @@ func (r Renderer) draw() []uint8 {
 }
 
 func main() {
-	game := Game{0, 0, false}
+	game := Game{
+		playerX: 5.0,
+		playerY: 5.0,
+		playerAngle: 0.0,
+		fov: 64.0,		// 64 because each pixel column (640) will be equal to 0.1 degrees.
+	}
 	renderer := NewRenderer(&game)
 
 	config := rp.WindowConfig{
