@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	rp "github.com/rebay1982/redpix"
 )
 
@@ -49,20 +47,23 @@ func (g *Game) update() {
 
 }
 
-func (r Renderer) calculateHeight(x int) int {
+func (r Renderer) calculateHeight(x int) (int, bool) {
 	rayAngle := r.calculateRayAngle(x)
 
-	// Vertical line collision check
-
-	// While collision with wall (vertical)
-
-	// Horizontal line collision check
 	posX, posY := r.game.playerX, r.game.playerY
-	if posY >= 0 && posX >= 0 && x >= 0 {
-		return FB_HEIGHT >> 1
+	vLength := r.calculateVerticalCollisionRayLength(posX, posY, rayAngle)
+	hLength := r.calculateHorizontalCollisionRayLength(posX, posY, rayAngle)
+	var rLength float64 = vLength
+
+	if hLength < vLength {
+		rLength = hLength
 	}
 
-	return FB_HEIGHT >> 1
+	if rLength > 1 {
+		return FB_HEIGHT >> 1, true
+	}
+
+	return FB_HEIGHT >> 1, true
 }
 
 /*
@@ -88,8 +89,24 @@ func (r Renderer) calculateRayAngle(x int) float64 {
 }
 
 func (r Renderer) checkWallCollision(x, y float64) bool {
+	// Ray is out of bounds, can happen when a cast ray is close to being parallel to vertical or horizontal when
+	//   computing collisions with vertical or horizontal lines.
+	// TODO: Make bounds configurable (map/world size)
+	if (x < 0 || x > 15) || (y < 0 || y > 15) {
+		return true
+	}
 
 	return false
+}
+
+func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) float64 {
+
+	return 0.0
+}
+
+func (r Renderer) calculateHorizontalCollisionRayLength(x, y, rAngle float64) float64 {
+
+	return 0.0
 }
 
 func NewRenderer(game *Game) *Renderer {
@@ -124,7 +141,7 @@ func (r Renderer) drawFloor() {
 }
 
 func (r Renderer) drawVertical(x int) {
-	h := r.calculateHeight(x)
+	h, _ := r.calculateHeight(x)
 	startHeight := (FB_HEIGHT - h) >> 1
 
 	for y := startHeight; y < (startHeight + h); y++ {
