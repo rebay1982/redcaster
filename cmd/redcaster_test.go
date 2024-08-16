@@ -111,3 +111,44 @@ func Test_RendererCheckWallCollision(t *testing.T) {
 		})
 	}
 }
+
+func Test_RendererCalculateRayAngle(t *testing.T) {
+	testCases := []struct {
+		name         string
+		pAngle       float64
+		fov          float64
+		screenColumn int
+		expected     float64
+	}{
+		{
+			name:         "player_look_right_leftmost_column",
+			pAngle:       0.0,
+			fov:          64.0,
+			screenColumn: 0,
+			expected:     32.0,
+		},
+		{
+			name:         "player_look_right_rightmost_column",
+			pAngle:       0.0,
+			fov:          64.0,
+			screenColumn: FB_WIDTH - 1,
+			expected:     328.0,
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			game := Game{
+				playerAngle: tc.pAngle,
+				fov:         tc.fov,
+			}
+
+			r := NewRenderer(&game)
+
+			got := r.calculateRayAngle(tc.screenColumn)
+
+			if got != tc.expected {
+				t.Errorf("Expected %f, got %f", tc.expected, got)
+			}
+		})
+	}
+}
