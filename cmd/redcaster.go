@@ -89,10 +89,10 @@ func (r Renderer) calculateRayAngle(x int) float64 {
 	return rayAngle
 }
 
+// TODO: Make bounds configurable (map/world size)
 func (r Renderer) checkWallCollision(x, y float64) bool {
 	// Ray is out of bounds, can happen when a cast ray is close to being parallel to vertical or horizontal when
 	//   computing collisions with vertical or horizontal lines.
-	// TODO: Make bounds configurable (map/world size)
 	if x < 0 || y < 0 {
 		return true
 	}
@@ -106,6 +106,7 @@ func (r Renderer) checkWallCollision(x, y float64) bool {
 
 	if r.game.gameMap[ix][iy] > 0 {
 		return true
+
 	} else {
 		return false
 	}
