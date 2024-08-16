@@ -138,8 +138,22 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 			name:         "player_look_right_middle_column",
 			pAngle:       0.0,
 			fov:          64.0,
-			screenColumn: (FB_WIDTH)>>1 - 1, // -1 because screen columns are 0 based.
+			screenColumn: FB_WIDTH>>1 - 1, // -1 because screen columns are 0 based.
 			expected:     0.1,
+		},
+		{
+			name:         "player_look_up_leftmost_column",
+			pAngle:       90.0,
+			fov:          64.0,
+			screenColumn: 0, // -1 because screen columns are 0 based.
+			expected:     122.0,
+		},
+		{
+			name:         "player_look_up_rightmost_column",
+			pAngle:       90.0,
+			fov:          64.0,
+			screenColumn: FB_WIDTH - 1, // -1 because screen columns are 0 based.
+			expected:     58.1,
 		},
 	}
 	for _, tc := range testCases {
