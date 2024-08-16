@@ -16,6 +16,7 @@ type Game struct {
 	playerX, playerY float64
 	playerAngle      float64
 	fov              float64
+	gameMap          [16][16]int
 }
 
 type Renderer struct {
@@ -92,11 +93,22 @@ func (r Renderer) checkWallCollision(x, y float64) bool {
 	// Ray is out of bounds, can happen when a cast ray is close to being parallel to vertical or horizontal when
 	//   computing collisions with vertical or horizontal lines.
 	// TODO: Make bounds configurable (map/world size)
-	if (x < 0 || x > 15) || (y < 0 || y > 15) {
+	if x < 0 || y < 0 {
 		return true
 	}
 
-	return false
+	if x > 15 || y > 15 {
+		return true
+	}
+
+	ix := int(x)
+	iy := int(y)
+
+	if r.game.gameMap[ix][iy] > 0 {
+		return true
+	} else {
+		return false
+	}
 }
 
 func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) float64 {
@@ -180,6 +192,24 @@ func main() {
 		playerY:     5.0,
 		playerAngle: 0.0,
 		fov:         64.0, // 64 because each pixel column (640) will be equal to 0.1 degrees.
+		gameMap: [16][16]int{
+			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+		},
 	}
 	renderer := NewRenderer(&game)
 
