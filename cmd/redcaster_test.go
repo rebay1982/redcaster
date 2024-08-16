@@ -9,9 +9,9 @@ func Test_RendererCheckWallCollision(t *testing.T) {
 		gameMap: [16][16]int{
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -38,9 +38,27 @@ func Test_RendererCheckWallCollision(t *testing.T) {
 			expected: false,
 		},
 		{
+			name:     "x_y_float_no_collision",
+			x:        1.20,
+			y:        1.45,
+			expected: false,
+		},
+		{
+			name:     "x_y_float_close_no_collision",
+			x:        1.99,
+			y:        1.99,
+			expected: false,
+		},
+		{
 			name:     "x_y_collision",
 			x:        0.0,
 			y:        0.0,
+			expected: true,
+		},
+		{
+			name:     "x_y_float_collision",
+			x:        2.20,
+			y:        2.45,
 			expected: true,
 		},
 		{
