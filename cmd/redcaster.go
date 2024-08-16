@@ -79,7 +79,7 @@ Reference for RayAngle:
 func (r Renderer) calculateRayAngle(x int) float64 {
 	pAng := r.game.playerAngle
 
-	xAngleRatio := r.game.fov / float64(FB_WIDTH-1)
+	xAngleRatio := r.game.fov / float64(FB_WIDTH)
 	rayAngle := pAng + (r.game.fov / 2) - xAngleRatio*float64(x)
 
 	if rayAngle < 0 {
