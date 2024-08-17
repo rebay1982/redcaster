@@ -1,6 +1,8 @@
 package main
 
 import (
+	"math"
+
 	rp "github.com/rebay1982/redpix"
 )
 
@@ -114,7 +116,28 @@ func (r Renderer) checkWallCollision(x, y float64) bool {
 
 func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) float64 {
 
-	return 0.0
+	rLength := 2048.0
+	// Increment X.
+	if rAngle < 90.0 || rAngle > 270 {
+		for i := 1; i < 16; i++ {
+			// Coordinates of ray FROM initial position x, y
+			rX := float64(int(x)+i) - x
+			rY := math.Tan(rAngle) * rX
+
+			// Collided, calculate length and return.
+			if r.checkWallCollision(x+rX, y+rY) {
+				rLength = rX * math.Cos(rAngle)
+				break
+			}
+		}
+	}
+
+	// Decrement X.
+	if rAngle > 90.0 && rAngle < 270.0 {
+
+	}
+
+	return rLength
 }
 
 func (r Renderer) calculateHorizontalCollisionRayLength(x, y, rAngle float64) float64 {
