@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"testing"
 )
 
@@ -155,6 +156,13 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 			screenColumn: FB_WIDTH - 1, // -1 because screen columns are 0 based.
 			expected:     58.1,
 		},
+		{
+			name:         "player_look_up_middle_column",
+			pAngle:       90.0,
+			fov:          64.0,
+			screenColumn: FB_WIDTH>>1 - 1, // -1 because screen columns are 0 based.
+			expected:     90.1,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -167,9 +175,17 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 
 			got := r.calculateRayAngle(tc.screenColumn)
 
-			if got != tc.expected {
+			if !aproximately(tc.expected, got) {
 				t.Errorf("Expected %f, got %f", tc.expected, got)
 			}
 		})
 	}
+}
+
+func aproximately(x, y float64) bool {
+	const tolerance = 0.000001
+	epsilon := math.Nextafter(1.0, 2.0) - 1.0
+	diff := math.Abs(x - y)
+
+	return diff < math.Max(tolerance*math.Max(math.Abs(x), math.Abs(y)), epsilon*8)
 }
