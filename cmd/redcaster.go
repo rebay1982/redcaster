@@ -118,6 +118,7 @@ func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) floa
 	rLength := 2048.0
 
 	// Increment X.
+	// TODO: Validate the math (negative, positive, taking the world coords into account). Y negative == going up.
 	if rAngle < 90.0 || rAngle > 270 {
 		for i := 1; i < 16; i++ {
 			// Coordinates of ray FROM initial position x, y
@@ -137,7 +138,7 @@ func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) floa
 	if rAngle > 90.0 && rAngle < 270.0 {
 		for i := 1; i < 16; i++ {
 			// Coordinates of ray FROM initial position x, y
-			rX := x - float64(int(x)+i) - x
+			rX := x - float64(int(x)+i)
 			rY := math.Tan(rAngle) * rX
 
 			// Collided, calculate length and return.
