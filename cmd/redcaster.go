@@ -115,8 +115,8 @@ func (r Renderer) checkWallCollision(x, y float64) bool {
 }
 
 func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) float64 {
-
 	rLength := 2048.0
+
 	// Increment X.
 	if rAngle < 90.0 || rAngle > 270 {
 		for i := 1; i < 16; i++ {
@@ -133,8 +133,19 @@ func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) floa
 	}
 
 	// Decrement X.
+	// TODO: Figure the math out on this one.
 	if rAngle > 90.0 && rAngle < 270.0 {
+		for i := 1; i < 16; i++ {
+			// Coordinates of ray FROM initial position x, y
+			rX := x - float64(int(x)+i) - x
+			rY := math.Tan(rAngle) * rX
 
+			// Collided, calculate length and return.
+			if r.checkWallCollision(x+rX, y+rY) {
+				rLength = rX * math.Cos(rAngle)
+				break
+			}
+		}
 	}
 
 	return rLength
