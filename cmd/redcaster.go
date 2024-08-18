@@ -127,29 +127,29 @@ func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) floa
 			// Substract rY because 0 on the Y axis is at the top. When moving X to the right (inc), Y will decrement when the
 			//   ray's angle is between 0 and 90.
 			if r.checkWallCollision(x+rX, y-rY) {
-				rLength = rX * math.Cos(rAngle)
+				rLength = rX / math.Cos(rAngle)
 				break
 			}
 		}
 	}
 
 	// Decrement X.
-	// TODO: Figure the math out on this one.
 	if rAngle > 90.0 && rAngle < 270.0 {
-		for i := 1; i < 16; i++ {
+		for i := 0; i < 16; i++ {
 			// Coordinates of ray FROM initial position x, y
-			rX := x - float64(int(x)+i)
+			rX := x - float64(int(x)-i)
 			rY := math.Tan(rAngle) * rX
 
-			// Collided, calculate length and return.
-			if r.checkWallCollision(x+rX, y+rY) {
-				rLength = rX * math.Cos(rAngle)
+			// Substract rX because 0 on the X axis is at the far left. When the ray's angle is between 90 and 270, X is
+			//   moving to the left thus decrementing X.
+			if r.checkWallCollision(x-rX, y+rY) {
+				rLength = rX / math.Cos(rAngle)
 				break
 			}
 		}
 	}
 
-	return rLength
+	return math.Abs(rLength)
 }
 
 func (r Renderer) calculateHorizontalCollisionRayLength(x, y, rAngle float64) float64 {
