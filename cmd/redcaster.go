@@ -118,15 +118,15 @@ func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) floa
 	rLength := 2048.0
 
 	// Increment X.
-	// TODO: Validate the math (negative, positive, taking the world coords into account). Y negative == going up.
 	if rAngle < 90.0 || rAngle > 270 {
 		for i := 1; i < 16; i++ {
 			// Coordinates of ray FROM initial position x, y
 			rX := float64(int(x)+i) - x
 			rY := math.Tan(rAngle) * rX
 
-			// Collided, calculate length and return.
-			if r.checkWallCollision(x+rX, y+rY) {
+			// Substract rY because 0 on the Y axis is at the top. When moving X to the right (inc), Y will decrement when the
+			//   ray's angle is between 0 and 90.
+			if r.checkWallCollision(x+rX, y-rY) {
 				rLength = rX * math.Cos(rAngle)
 				break
 			}
