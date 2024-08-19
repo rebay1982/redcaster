@@ -184,6 +184,56 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 	}
 }
 
+func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
+	game := Game{
+		gameMap: [16][16]int{
+			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+		},
+	}
+
+	testCases := []struct {
+		name     string
+		pX, pY   float64
+		rAngle   float64
+		expected float64
+	}{
+		{
+			name:     "1_1_pos_315_degrees",
+			pX:       1.0,
+			pY:       1.0,
+			rAngle:   315.0,
+			expected: 0.0,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := NewRenderer(&game)
+
+			got := r.calculateVerticalCollisionRayLength(tc.pX, tc.pY, tc.rAngle)
+
+			if !aproximately(tc.expected, got) {
+				t.Errorf("Expected %f, got %f", tc.expected, got)
+			}
+		})
+	}
+}
+
 func aproximately(x, y float64) bool {
 	const tolerance = 0.000001
 	epsilon := math.Nextafter(1.0, 2.0) - 1.0

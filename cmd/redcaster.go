@@ -1,6 +1,7 @@
 package main
 
 import (
+	//"fmt"
 	"math"
 
 	rp "github.com/rebay1982/redpix"
@@ -115,6 +116,8 @@ func (r Renderer) checkWallCollision(x, y float64) bool {
 }
 
 func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) float64 {
+	// Convert the angle (in degrees) to radians because that's what the math library expects.
+	rRad := rAngle * math.Pi / 180.0
 	rLength := 2048.0
 
 	// Increment X.
@@ -122,12 +125,13 @@ func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) floa
 		for i := 1; i < 16; i++ {
 			// Coordinates of ray FROM initial position x, y
 			rX := float64(int(x)+i) - x
-			rY := math.Tan(rAngle) * rX
+			rY := math.Tan(rRad) * rX
+			//fmt.Printf("A i: %d, rX: %f, rY: %f\n", i, rX, rY)
 
 			// Substract rY because 0 on the Y axis is at the top. When moving X to the right (inc), Y will decrement when the
 			//   ray's angle is between 0 and 90.
 			if r.checkWallCollision(x+rX, y-rY) {
-				rLength = rX / math.Cos(rAngle)
+				rLength = rX / math.Cos(rRad)
 				break
 			}
 		}
@@ -136,14 +140,15 @@ func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) floa
 	// Decrement X.
 	if rAngle > 90.0 && rAngle < 270.0 {
 		for i := 0; i < 16; i++ {
+			fmt.Printf("B i: %d\n", i)
 			// Coordinates of ray FROM initial position x, y
 			rX := x - float64(int(x)-i)
-			rY := math.Tan(rAngle) * rX
+			rY := math.Tan(rRad) * rX
 
 			// Substract rX because 0 on the X axis is at the far left. When the ray's angle is between 90 and 270, X is
 			//   moving to the left thus decrementing X.
 			if r.checkWallCollision(x-rX, y+rY) {
-				rLength = rX / math.Cos(rAngle)
+				rLength = rX / math.Cos(rRad)
 				break
 			}
 		}
