@@ -1,7 +1,7 @@
 package main
 
 import (
-	//"fmt"
+	"fmt"
 	"math"
 
 	rp "github.com/rebay1982/redpix"
@@ -147,7 +147,11 @@ func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) floa
 
 			// Substract rX because 0 on the X axis is at the far left. When the ray's angle is between 90 and 270, X is
 			//   moving to the left thus decrementing X.
-			if r.checkWallCollision(x-rX, y+rY) {
+
+			// -0.001 hack on x-xR necessary because collision checking is done on integer values (ex: >= 1, < 2). Ray should
+			//   be < 1 if player is standing right next to a wall in an adjacent square.
+			if r.checkWallCollision(x-rX-0.001, y+rY) {
+
 				rLength = rX / math.Cos(rRad)
 				break
 			}
