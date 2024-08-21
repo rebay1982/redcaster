@@ -140,7 +140,7 @@ func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) floa
 	// Decrement X.
 	if rAngle > 90.0 && rAngle < 270.0 {
 		for i := 0; i < 16; i++ {
-			fmt.Printf("B i: %d\n", i)
+			//fmt.Printf("B %f, i: %d\n", rAngle, i)
 			// Coordinates of ray FROM initial position x, y
 			rX := x - float64(int(x)-i)
 			rY := math.Tan(rRad) * rX

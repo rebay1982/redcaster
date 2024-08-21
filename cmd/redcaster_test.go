@@ -2,6 +2,7 @@ package main
 
 import (
 	"math"
+	//"fmt"
 	"testing"
 )
 
@@ -209,11 +210,11 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1},
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 		},
 	}
@@ -237,6 +238,41 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 			pY:       1.0,
 			rAngle:   0.0,
 			expected: 0.0000001,
+		},
+		{
+			name:     "1_14_pos_15_degrees",
+			pX:       1.0,
+			pY:       14.0,
+			rAngle:   15.0,
+			expected: 3.105828541,
+		},
+		{
+			name:     "1_14_pos_30_degrees",
+			pX:       1.0,
+			pY:       14.0,
+			rAngle:   30.0,
+			expected: 3.464101615,
+		},
+		{
+			name:     "2_14_pos_45_degrees",
+			pX:       2.0,
+			pY:       14.0,
+			rAngle:   45.0,
+			expected: 2.828427125,
+		},
+		{
+			name:     "3_14_pos_60_degrees",
+			pX:       3.0,
+			pY:       14.0,
+			rAngle:   60.0,
+			expected: 2.0,
+		},
+		{
+			name:     "3_14_pos_75_degrees",
+			pX:       3.0,
+			pY:       14.0,
+			rAngle:   75.0,
+			expected: 3.863703305,
 		},
 		{
 			name:     "1_1_pos_90_degrees_no_vert_hit",
@@ -293,6 +329,7 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			r := NewRenderer(&game)
 
+			//fmt.Println(tc.name)
 			got := r.calculateVerticalCollisionRayLength(tc.pX, tc.pY, tc.rAngle)
 
 			if !aproximately(tc.expected, got) {
