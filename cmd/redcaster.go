@@ -107,7 +107,7 @@ func (r Renderer) checkWallCollision(x, y float64) bool {
 	ix := int(x)
 	iy := int(y)
 
-	if r.game.gameMap[ix][iy] > 0 {
+	if r.game.gameMap[iy][ix] > 0 {
 		return true
 
 	} else {

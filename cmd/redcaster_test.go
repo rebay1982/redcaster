@@ -10,7 +10,7 @@ func Test_RendererCheckWallCollision(t *testing.T) {
 		gameMap: [16][16]int{
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1},
 			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -37,6 +37,18 @@ func Test_RendererCheckWallCollision(t *testing.T) {
 			x:        1.0,
 			y:        1.0,
 			expected: false,
+		},
+		{
+			name:     "x_y_diff_collision",
+			x:        11.0,
+			y:        2.0,
+			expected: true,
+		},
+		{
+			name:     "x_y_diff_float_collision",
+			x:        11.8,
+			y:        2.9,
+			expected: true,
 		},
 		{
 			name:     "x_y_float_no_collision",
@@ -199,9 +211,9 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 		},
 	}
@@ -220,11 +232,11 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 			expected: 14.0,
 		},
 		{
-			name:     "1_1_pos_180_degrees",
-			pX:       1.0,
+			name:     "14_1_pos_0_degrees",
+			pX:       14.9999999, // Completely against the right wall on row 1.
 			pY:       1.0,
-			rAngle:   180.0,
-			expected: 0.0,
+			rAngle:   0.0,
+			expected: 0.0000001,
 		},
 		{
 			name:     "1_1_pos_90_degrees_no_vert_hit",
@@ -234,11 +246,46 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 			expected: 2048.0,
 		},
 		{
+			name:     "1_1_pos_180_degrees",
+			pX:       1.0,
+			pY:       1.0,
+			rAngle:   180.0,
+			expected: 0.0,
+		},
+		{
+			name:     "14_12_pos_180_degrees",
+			pX:       14.0,
+			pY:       12.0,
+			rAngle:   180.0,
+			expected: 7.0,
+		},
+		{
 			name:     "1_1_pos_270_degrees_no_hit",
 			pX:       1.0,
 			pY:       1.0,
 			rAngle:   270.0,
 			expected: 2048.0,
+		},
+		{
+			name:     "1_1_pos_315_degrees_no_hit",
+			pX:       1.0,
+			pY:       1.0,
+			rAngle:   315.0,
+			expected: 19.798990,
+		},
+		{
+			name:     "1_12_pos_360_degrees",
+			pX:       1.0,
+			pY:       12.0,
+			rAngle:   360.0,
+			expected: 3.0,
+		},
+		{
+			name:     "1_12_pos_360_degrees",
+			pX:       1.0,
+			pY:       12.0,
+			rAngle:   360.0,
+			expected: 3.0,
 		},
 	}
 
