@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fmt"
 	"math"
+	"time"
 
 	rp "github.com/rebay1982/redpix"
 )
@@ -26,31 +28,10 @@ type Renderer struct {
 	frameBuffer []uint8
 }
 
-// TODO: Loadable from file.
-var gameMap = [16][16]int{
-	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1},
-	{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-	{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-}
-
-func (g *Game) update() {
-
-}
-
 func (r Renderer) calculateHeight(x int) (int, bool) {
+	height := float64(FB_HEIGHT)
+	horizontalOrientation := false
+
 	rayAngle := r.calculateRayAngle(x)
 
 	posX, posY := r.game.playerX, r.game.playerY
@@ -59,14 +40,15 @@ func (r Renderer) calculateHeight(x int) (int, bool) {
 	var rLength float64 = vLength
 
 	if hLength < vLength {
+		horizontalOrientation = true
 		rLength = hLength
 	}
 
-	if rLength > 1 {
-		return FB_HEIGHT >> 1, true
+	if rLength >= 1 {
+		height = height / rLength
 	}
 
-	return FB_HEIGHT >> 1, true
+	return int(height), horizontalOrientation
 }
 
 /*
@@ -194,6 +176,10 @@ func (r Renderer) calculateHorizontalCollisionRayLength(x, y, rAngle float64) fl
 	return math.Abs(rLength)
 }
 
+func (r Renderer) fishEyeCompensation(rAngle, rLength float64) float64 {
+	return rLength
+}
+
 func NewRenderer(game *Game) *Renderer {
 	r := &Renderer{
 		game:        game,
@@ -226,14 +212,19 @@ func (r Renderer) drawFloor() {
 }
 
 func (r Renderer) drawVertical(x int) {
-	h, _ := r.calculateHeight(x)
+	h, o := r.calculateHeight(x)
 	startHeight := (FB_HEIGHT - h) >> 1
 
 	for y := startHeight; y < (startHeight + h); y++ {
 		colorIndex := (x + y*FB_WIDTH) * 4
-		r.frameBuffer[colorIndex+1] = 0xFF // Green component
-		r.frameBuffer[colorIndex+2] = 0xFF // Blue component
-		r.frameBuffer[colorIndex+3] = 0xFF // Alpha
+		colorIntensity := 0xFF
+		if o {
+			colorIntensity = 0xAA
+		}
+		r.frameBuffer[colorIndex] = uint8(colorIntensity) // Green component
+		r.frameBuffer[colorIndex+1] = 0x00                // Green component
+		r.frameBuffer[colorIndex+2] = 0x00                // Blue component
+		r.frameBuffer[colorIndex+3] = 0xFF                // Alpha
 	}
 }
 
@@ -295,11 +286,31 @@ func main() {
 	}
 
 	go func() {
+		sinceLastCall := 0
+		var start time.Time
 		for {
-			game.update()
+
+			start = time.Now()
+			game.update(sinceLastCall)
+			sinceLastCall = int(time.Since(start).Nanoseconds())
 		}
 	}()
 
 	rp.Init(config)
 	rp.Run(nil, renderer.draw)
+}
+
+var nsCount int
+
+func (g *Game) update(timeDeltaNanoSeconds int) {
+	nsCount += timeDeltaNanoSeconds
+	if nsCount > 10000 {
+		nsCount = 0
+		g.playerAngle += 0.001
+
+		if g.playerAngle > 360.0 {
+			g.playerAngle -= 360.0
+		}
+		fmt.Printf("pAngle %f\n", g.playerAngle)
+	}
 }
