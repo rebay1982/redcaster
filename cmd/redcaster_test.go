@@ -330,7 +330,6 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 			rAngle:   180.0,
 			expected: 7.0,
 		},
-		//
 		{
 			name:     "3_7_pos_195_degrees",
 			pX:       3.0,
