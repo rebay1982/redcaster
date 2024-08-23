@@ -423,6 +423,225 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 	}
 }
 
+func Test_RendererCalculateHorizontalCollisionRayLength(t *testing.T) {
+	game := Game{
+		gameMap: [16][16]int{
+			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
+		},
+	}
+
+	testCases := []struct {
+		name     string
+		pX, pY   float64
+		rAngle   float64
+		expected float64
+	}{
+		{
+			name:     "1_1_pos_0_degrees_no_horizontal_wall_hit",
+			pX:       1.0,
+			pY:       1.0,
+			rAngle:   0.0,
+			expected: 2048.0,
+		},
+		{
+			name:     "7_3_pos_15_degrees",
+			pX:       7.0,
+			pY:       3.0,
+			rAngle:   15.0,
+			expected: 7.72740661,
+		},
+		{
+			name:     "7_3_pos_30_degrees",
+			pX:       7.0,
+			pY:       3.0,
+			rAngle:   30.0,
+			expected: 4.0,
+		},
+		{
+			name:     "7_3_pos_45_degrees",
+			pX:       7.0,
+			pY:       3.0,
+			rAngle:   45.0,
+			expected: 2.828427125,
+		},
+		{
+			name:     "7_3_pos_60_degrees",
+			pX:       7.0,
+			pY:       3.0,
+			rAngle:   60.0,
+			expected: 2.309401077,
+		},
+		{
+			name:     "7_3_pos_75_degrees",
+			pX:       7.0,
+			pY:       3.0,
+			rAngle:   75.0,
+			expected: 2.070552361,
+		},
+		{
+			name:     "7_3_pos_90_degrees",
+			pX:       7.0,
+			pY:       3.0,
+			rAngle:   90.0,
+			expected: 2.0,
+		},
+		{
+			name:     "7_3_pos_105_degrees",
+			pX:       7.0,
+			pY:       3.0,
+			rAngle:   105.0,
+			expected: 2.070552361,
+		},
+		{
+			name:     "7_3_pos_120_degrees",
+			pX:       7.0,
+			pY:       3.0,
+			rAngle:   120.0,
+			expected: 2.309401077,
+		},
+		{
+			name:     "7_3_pos_135_degrees",
+			pX:       7.0,
+			pY:       3.0,
+			rAngle:   135.0,
+			expected: 2.828427125,
+		},
+		//		{
+		//			name:     "3_7_pos_150_degrees",
+		//			pX:       3.0,
+		//			pY:       7.0,
+		//			rAngle:   150.0,
+		//			expected: 2.309401077,
+		//		},
+		//		{
+		//			name:     "3_7_pos_165_degrees",
+		//			pX:       3.0,
+		//			pY:       7.0,
+		//			rAngle:   165.0,
+		//			expected: 2.070552361,
+		//		},
+		//		{
+		//			name:     "1_1_pos_180_degrees",
+		//			pX:       1.0,
+		//			pY:       1.0,
+		//			rAngle:   180.0,
+		//			expected: 0.0,
+		//		},
+		//		{
+		//			name:     "3_7_pos_195_degrees",
+		//			pX:       3.0,
+		//			pY:       7.0,
+		//			rAngle:   195.0,
+		//			expected: 2.070552361,
+		//		},
+		//		{
+		//			name:     "3_7_pos_210_degrees",
+		//			pX:       3.0,
+		//			pY:       7.0,
+		//			rAngle:   210.0,
+		//			expected: 2.309401077,
+		//		},
+		//		{
+		//			name:     "3_7_pos_225_degrees",
+		//			pX:       3.0,
+		//			pY:       7.0,
+		//			rAngle:   225.0,
+		//			expected: 2.828427125,
+		//		},
+		//		{
+		//			name:     "3_7_pos_240_degrees",
+		//			pX:       3.0,
+		//			pY:       7.0,
+		//			rAngle:   240.0,
+		//			expected: 4.0,
+		//		},
+		//		{
+		//			name:     "3_7_pos_255_degrees",
+		//			pX:       3.0,
+		//			pY:       7.0,
+		//			rAngle:   255.0,
+		//			expected: 7.72740661,
+		//		},
+		//		{
+		//			name:     "1_1_pos_270_degrees_no_hit",
+		//			pX:       1.0,
+		//			pY:       1.0,
+		//			rAngle:   270.0,
+		//			expected: 2048.0,
+		//		},
+		//		{
+		//			name:     "13_7_pos_285_degrees",
+		//			pX:       13.0,
+		//			pY:       7.0,
+		//			rAngle:   285.0,
+		//			expected: 7.72740661,
+		//		},
+		//		{
+		//			name:     "13_7_pos_300_degrees",
+		//			pX:       13.0,
+		//			pY:       7.0,
+		//			rAngle:   300.0,
+		//			expected: 4.0,
+		//		},
+		//		{
+		//			name:     "13_7_pos_315_degrees",
+		//			pX:       13.0,
+		//			pY:       7.0,
+		//			rAngle:   315.0,
+		//			expected: 2.828427125,
+		//		},
+		//		{
+		//			name:     "13_7_pos_330_degrees",
+		//			pX:       13.0,
+		//			pY:       7.0,
+		//			rAngle:   330.0,
+		//			expected: 2.309401077,
+		//		},
+		//		{
+		//			name:     "13_7_pos_345_degrees",
+		//			pX:       13.0,
+		//			pY:       7.0,
+		//			rAngle:   345.0,
+		//			expected: 2.070552361,
+		//		},
+		//		{
+		//			name:     "13_7_pos_360_degrees",
+		//			pX:       13.0,
+		//			pY:       7.0,
+		//			rAngle:   360.0,
+		//			expected: 2.0,
+		//		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := NewRenderer(&game)
+
+			//fmt.Println(tc.name)
+			got := r.calculateHorizontalCollisionRayLength(tc.pX, tc.pY, tc.rAngle)
+
+			if !aproximately(tc.expected, got) {
+				t.Errorf("Expected %f, got %f", tc.expected, got)
+			}
+		})
+	}
+}
+
 func aproximately(x, y float64) bool {
 	const tolerance = 0.000001
 	epsilon := math.Nextafter(1.0, 2.0) - 1.0

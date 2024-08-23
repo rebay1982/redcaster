@@ -1,7 +1,6 @@
 package main
 
 import (
-	//"fmt"
 	"math"
 
 	rp "github.com/rebay1982/redpix"
@@ -120,13 +119,11 @@ func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) floa
 	rRad := rAngle * math.Pi / 180.0
 	rLength := 2048.0
 
-	// Increment X.
 	if rAngle < 90.0 || rAngle > 270 {
 		for i := 1; i < 16; i++ {
 			// Coordinates of ray FROM initial position x, y
 			rX := float64(int(x)+i) - x
 			rY := math.Tan(rRad) * rX
-			//fmt.Printf("A i: %d, rX: %f, rY: %f\n", i, rX, rY)
 
 			// Substract rY because 0 on the Y axis is at the top. When moving X to the right (inc), Y will decrement when the
 			//   ray's angle is between 0 and 90.
@@ -137,10 +134,8 @@ func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) floa
 		}
 	}
 
-	// Decrement X.
 	if rAngle > 90.0 && rAngle < 270.0 {
 		for i := 0; i < 16; i++ {
-			//fmt.Printf("B %f, i: %d\n", rAngle, i)
 			// Coordinates of ray FROM initial position x, y
 			rX := x - float64(int(x)-i)
 			rY := math.Tan(rRad) * rX
@@ -162,8 +157,41 @@ func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) floa
 }
 
 func (r Renderer) calculateHorizontalCollisionRayLength(x, y, rAngle float64) float64 {
+	// Convert the angle (in degrees) to radians because that's what the math library expects.
+	rRad := rAngle * math.Pi / 180.0
+	rLength := 2048.0
 
-	return 0.0
+	if rAngle > 0.0 && rAngle < 180.0 {
+		for i := 0; i < 16; i++ {
+			// Coordinates of ray FROM initial position x, y
+			rY := y - float64(int(y)-i)
+			rX := (1 / math.Tan(rRad)) * rY
+
+			// -0.001 hack on y-yR necessary because collision checking is done on integer values (ex: >= 1, < 2). Ray should
+			//   be < 1 if player is standing right next to a wall in an adjacent square.
+			if r.checkWallCollision(x+rX, y-rY-0.001) {
+				rLength = rY / math.Sin(rRad)
+				break
+			}
+		}
+	}
+
+	if rAngle > 180.0 && rAngle < 360.0 {
+		for i := 1; i < 16; i++ {
+			// Coordinates of ray FROM initial position x, y
+			rY := float64(int(y)+i) - y
+			rX := (1 / math.Tan(rRad)) * rY
+
+			// Substract rX because the Tangent is negative from 270 to 360 and positive from 180 to 270, which is the
+			//	 opposite of our reference coordinate system. (it is negative from 180 to 270 and positive from 270 to 360).
+			if r.checkWallCollision(x-rX, y+rY) {
+				rLength = rY / math.Sin(rRad)
+				break
+			}
+		}
+	}
+
+	return math.Abs(rLength)
 }
 
 func NewRenderer(game *Game) *Renderer {
