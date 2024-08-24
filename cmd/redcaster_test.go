@@ -136,46 +136,53 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 		expected     float64
 	}{
 		{
-			name:         "player_look_right_leftmost_column",
+			name:         "player_look_0_column_0",
 			pAngle:       0.0,
 			fov:          64.0,
 			screenColumn: 0,
 			expected:     32.0,
 		},
 		{
-			name:         "player_look_right_rightmost_column",
+			name:         "player_look_0_column_max_width",
 			pAngle:       0.0,
 			fov:          64.0,
 			screenColumn: FB_WIDTH - 1, // -1 because screen columns are 0 based.
 			expected:     328.1,
 		},
 		{
-			name:         "player_look_right_middle_column",
+			name:         "player_look_0_column_half_width",
 			pAngle:       0.0,
 			fov:          64.0,
 			screenColumn: FB_WIDTH>>1 - 1, // -1 because screen columns are 0 based.
 			expected:     0.1,
 		},
 		{
-			name:         "player_look_up_leftmost_column",
+			name:         "player_look_90_column_0",
 			pAngle:       90.0,
 			fov:          64.0,
 			screenColumn: 0, // -1 because screen columns are 0 based.
 			expected:     122.0,
 		},
 		{
-			name:         "player_look_up_rightmost_column",
+			name:         "player_look_90_max_width",
 			pAngle:       90.0,
 			fov:          64.0,
 			screenColumn: FB_WIDTH - 1, // -1 because screen columns are 0 based.
 			expected:     58.1,
 		},
 		{
-			name:         "player_look_up_middle_column",
+			name:         "player_look_90_half_width",
 			pAngle:       90.0,
 			fov:          64.0,
 			screenColumn: FB_WIDTH>>1 - 1, // -1 because screen columns are 0 based.
 			expected:     90.1,
+		},
+		{
+			name:         "player_look_350_column_0",
+			pAngle:       350.0,
+			fov:          64.0,
+			screenColumn: 0,
+			expected:     22.0,
 		},
 	}
 

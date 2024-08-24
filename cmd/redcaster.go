@@ -66,10 +66,13 @@ func (r Renderer) calculateRayAngle(x int) float64 {
 	xAngleRatio := r.game.fov / float64(FB_WIDTH)
 	rayAngle := pAng + (r.game.fov / 2) - xAngleRatio*float64(x)
 
-	if rayAngle < 0 {
-		rayAngle += 360
+	if rayAngle < 0.0 {
+		rayAngle += 360.0
 	}
 
+	if rayAngle > 360.0 {
+		rayAngle -= 360.0
+	}
 	return rayAngle
 }
 
