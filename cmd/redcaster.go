@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	//"fmt"
 	"math"
 	"time"
 
@@ -314,6 +314,6 @@ func (g *Game) update(timeDeltaNanoSeconds int) {
 		if g.playerAngle > 360.0 {
 			g.playerAngle -= 360.0
 		}
-		fmt.Printf("pAngle %f\n", g.playerAngle)
+		//fmt.Printf("pAngle %f\n", g.playerAngle)
 	}
 }
