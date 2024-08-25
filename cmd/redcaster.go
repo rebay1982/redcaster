@@ -21,11 +21,59 @@ type Game struct {
 	playerAngle      float64
 	fov              float64
 	gameMap          [16][16]int
+	inputHandler     *InputHandler
 }
 
 type Renderer struct {
 	game        *Game
 	frameBuffer []uint8
+}
+
+type InputHandler struct {
+	input InputVector
+}
+
+type InputVector struct {
+	PlayerForward  bool
+	PlayerBackward bool
+	PlayerLeft     bool
+	PlayerRight    bool
+}
+
+func (i *InputHandler) handleInputEvent(e rp.InputEvent) {
+	// Ignore repeated key presses.
+	if e.Action == rp.IN_ACT_REPEATED {
+		return
+	}
+
+	setInput := false
+	// Released handling is implicit.
+	if e.Action == rp.IN_ACT_PRESSED {
+		setInput = true
+	}
+
+	switch e.Key {
+	case rp.IN_PLAYER_FORWARD:
+		i.input.PlayerForward = setInput
+	case rp.IN_PLAYER_BACKWARD:
+		i.input.PlayerBackward = setInput
+	case rp.IN_PLAYER_LEFT:
+		i.input.PlayerLeft = setInput
+	case rp.IN_PLAYER_RIGHT:
+		i.input.PlayerRight = setInput
+	}
+}
+
+func (i InputHandler) GetInputVector() InputVector {
+	return i.input
+}
+
+func NewInputHandler() *InputHandler {
+	i := &InputHandler{
+		input: InputVector{},
+	}
+
+	return i
 }
 
 func (r Renderer) calculateHeight(x int) (int, bool) {
@@ -245,7 +293,6 @@ func (r Renderer) draw() []uint8 {
 	r.drawFloor()
 
 	// Draw walls
-	//fmt.Println("Rendering screen: ")
 	for x := 0; x < FB_WIDTH; x++ {
 		r.drawVertical(x)
 	}
@@ -254,6 +301,7 @@ func (r Renderer) draw() []uint8 {
 }
 
 func main() {
+	inputHandler := NewInputHandler()
 	game := Game{
 		playerX:     5.0,
 		playerY:     5.0,
@@ -277,6 +325,7 @@ func main() {
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 		},
+		inputHandler: inputHandler,
 	}
 	renderer := NewRenderer(&game)
 
@@ -288,32 +337,79 @@ func main() {
 		VSync:     true,
 	}
 
+	// Update goroutine.
 	go func() {
 		sinceLastCall := 0
 		var start time.Time
 		for {
-
 			start = time.Now()
-			game.update(sinceLastCall)
+			game.update()
 			sinceLastCall = int(time.Since(start).Nanoseconds())
+
+			time.Sleep(time.Duration(1600000 - sinceLastCall))
 		}
 	}()
 
-	rp.Init(config)
-	rp.Run(nil, renderer.draw)
+	rp.Init(config, renderer.draw, inputHandler.handleInputEvent)
+	rp.Run()
 }
 
-var nsCount int
+// TODO: This is copied from the renderer to validate collisions.
+func (g Game) checkWallCollision(x, y float64) bool {
+	if x < 0 || y < 0 {
+		return true
+	}
 
-func (g *Game) update(timeDeltaNanoSeconds int) {
-	nsCount += timeDeltaNanoSeconds
-	if nsCount > 10000 {
-		nsCount = 0
-		g.playerAngle += 0.001
+	if x > 15 || y > 15 {
+		return true
+	}
+
+	ix := int(x)
+	iy := int(y)
+
+	if g.gameMap[iy][ix] > 0 {
+		return true
+
+	} else {
+		return false
+	}
+}
+
+// Careful, we're updating game while the rendering loop is running. Might cause issues.
+func (g *Game) update() {
+	inputVector := g.inputHandler.input
+
+	if inputVector.PlayerRight {
+		g.playerAngle -= 0.3
+
+		if g.playerAngle < 0.0 {
+			g.playerAngle += 360.0
+		}
+	}
+
+	if inputVector.PlayerLeft {
+		g.playerAngle += 0.3
 
 		if g.playerAngle > 360.0 {
 			g.playerAngle -= 360.0
 		}
-		//fmt.Printf("pAngle %f\n", g.playerAngle)
 	}
+
+	pRad := g.playerAngle * math.Pi / 180.0
+	deltaX := 0.01 * math.Cos(pRad)
+	deltaY := 0.01 * math.Sin(pRad)
+	if inputVector.PlayerForward {
+		if !g.checkWallCollision(g.playerX+deltaX, g.playerY-deltaY) {
+			g.playerX += deltaX
+			g.playerY -= deltaY
+		}
+	}
+
+	if inputVector.PlayerBackward {
+		if !g.checkWallCollision(g.playerX-deltaX, g.playerY+deltaY) {
+			g.playerX -= deltaX
+			g.playerY += deltaY
+		}
+	}
+	//fmt.Printf("angle: %f, x: %f, y: %f\n", g.playerAngle, g.playerX, g.playerY)
 }
