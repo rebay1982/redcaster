@@ -95,7 +95,7 @@ func (r Renderer) computeWallHeight(x int) (int, bool) {
 
 	posX, posY := r.game.playerX, r.game.playerY
 	vLength := r.computeVerticalCollisionRayLength(posX, posY, rayAngle)
-	hLength := r.calculateHorizontalCollisionRayLength(posX, posY, rayAngle)
+	hLength := r.computeHorizontalCollisionRayLength(posX, posY, rayAngle)
 	var rLength float64 = vLength
 
 	if hLength < vLength {
