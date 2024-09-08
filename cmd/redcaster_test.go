@@ -195,7 +195,7 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 
 			r := NewRenderer(&game)
 
-			got := r.calculateRayAngle(tc.screenColumn)
+			got := r.computeRayAngle(tc.screenColumn)
 
 			if !aproximately(tc.expected, got) {
 				t.Errorf("Expected %f, got %f", tc.expected, got)
@@ -421,7 +421,7 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 			r := NewRenderer(&game)
 
 			//fmt.Println(tc.name)
-			got := r.calculateVerticalCollisionRayLength(tc.pX, tc.pY, tc.rAngle)
+			got := r.computeVerticalCollisionRayLength(tc.pX, tc.pY, tc.rAngle)
 
 			if !aproximately(tc.expected, got) {
 				t.Errorf("Expected %f, got %f", tc.expected, got)

@@ -1,7 +1,6 @@
 package main
 
 import (
-	//"fmt"
 	"math"
 	"time"
 
@@ -25,8 +24,9 @@ type Game struct {
 }
 
 type Renderer struct {
-	game        *Game
-	frameBuffer []uint8
+	game          *Game
+	frameBuffer   []uint8
+	rAngleOffsets []float64
 }
 
 type InputHandler struct {
@@ -76,14 +76,25 @@ func NewInputHandler() *InputHandler {
 	return i
 }
 
-func (r Renderer) calculateHeight(x int) (int, bool) {
+func NewRenderer(game *Game) *Renderer {
+	r := &Renderer{
+		game:        game,
+		frameBuffer: make([]uint8, FB_WIDTH*FB_HEIGHT*4, FB_WIDTH*FB_HEIGHT*4),
+	}
+
+	r.precomputeRayAngleOffsets()
+
+	return r
+}
+
+func (r Renderer) computeWallHeight(x int) (int, bool) {
 	height := float64(FB_HEIGHT)
 	horizontalOrientation := false
 
-	rayAngle := r.calculateRayAngle(x)
+	rayAngle := r.computeRayAngle(x)
 
 	posX, posY := r.game.playerX, r.game.playerY
-	vLength := r.calculateVerticalCollisionRayLength(posX, posY, rayAngle)
+	vLength := r.computeVerticalCollisionRayLength(posX, posY, rayAngle)
 	hLength := r.calculateHorizontalCollisionRayLength(posX, posY, rayAngle)
 	var rLength float64 = vLength
 
@@ -92,6 +103,7 @@ func (r Renderer) calculateHeight(x int) (int, bool) {
 		rLength = hLength
 	}
 
+	rLength = r.fishEyeCompensation(r.game.playerAngle, rayAngle, rLength)
 	if rLength >= 1 {
 		height = height / rLength
 	}
@@ -108,11 +120,12 @@ Reference for RayAngle:
 	 				|
 				 270
 */
-func (r Renderer) calculateRayAngle(x int) float64 {
+func (r Renderer) computeRayAngle(x int) float64 {
 	pAng := r.game.playerAngle
 
-	xAngleRatio := r.game.fov / float64(FB_WIDTH)
-	rayAngle := pAng + (r.game.fov / 2) - xAngleRatio*float64(x)
+	//xAngleRatio := r.game.fov / float64(FB_WIDTH)
+	//rayAngle := pAng + (r.game.fov / 2) - xAngleRatio*float64(x)
+	rayAngle := pAng + r.rAngleOffsets[x]
 
 	if rayAngle < 0.0 {
 		rayAngle += 360.0
@@ -147,7 +160,7 @@ func (r Renderer) checkWallCollision(x, y float64) bool {
 	}
 }
 
-func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) float64 {
+func (r Renderer) computeVerticalCollisionRayLength(x, y, rAngle float64) float64 {
 	// Convert the angle (in degrees) to radians because that's what the math library expects.
 	rRad := rAngle * math.Pi / 180.0
 	rLength := 2048.0
@@ -189,7 +202,7 @@ func (r Renderer) calculateVerticalCollisionRayLength(x, y, rAngle float64) floa
 	return math.Abs(rLength)
 }
 
-func (r Renderer) calculateHorizontalCollisionRayLength(x, y, rAngle float64) float64 {
+func (r Renderer) computeHorizontalCollisionRayLength(x, y, rAngle float64) float64 {
 	// Convert the angle (in degrees) to radians because that's what the math library expects.
 	rRad := rAngle * math.Pi / 180.0
 	rLength := 2048.0
@@ -227,17 +240,26 @@ func (r Renderer) calculateHorizontalCollisionRayLength(x, y, rAngle float64) fl
 	return math.Abs(rLength)
 }
 
-func (r Renderer) fishEyeCompensation(rAngle, rLength float64) float64 {
-	return rLength
+// FishEyeCompensation compensates for the perspective effect of the ray's angle relative to the player's direction.
+func (r Renderer) fishEyeCompensation(pAngle, rAngle, rLength float64) float64 {
+	rAngleToPlayer := math.Abs(rAngle - pAngle)
+	rRad := rAngleToPlayer * math.Pi / 180.0
+
+	return math.Abs(rLength * math.Cos(rRad))
 }
 
-func NewRenderer(game *Game) *Renderer {
-	r := &Renderer{
-		game:        game,
-		frameBuffer: make([]uint8, FB_WIDTH*FB_HEIGHT*4, FB_WIDTH*FB_HEIGHT*4),
-	}
+func (r *Renderer) precomputeRayAngleOffsets() {
+	fov := r.game.fov
+	r.rAngleOffsets = make([]float64, FB_WIDTH)
 
-	return r
+	fRad := (fov / 2) * math.Pi / 180
+
+	oppositeRefLength := math.Tan(fRad)
+	oppositeStep := oppositeRefLength / float64(FB_WIDTH>>1)
+
+	for i := 0; i < FB_WIDTH; i++ {
+		r.rAngleOffsets[i] = math.Atan(oppositeRefLength-float64(i)*oppositeStep) * 180 / math.Pi
+	}
 }
 
 func (r Renderer) drawCeiling() {
@@ -263,7 +285,7 @@ func (r Renderer) drawFloor() {
 }
 
 func (r Renderer) drawVertical(x int) {
-	h, o := r.calculateHeight(x)
+	h, o := r.computeWallHeight(x)
 	startHeight := (FB_HEIGHT - h) >> 1
 
 	for y := startHeight; y < (startHeight + h); y++ {
@@ -310,18 +332,18 @@ func main() {
 		gameMap: [16][16]int{
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 1, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1},
+			{1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1},
+			{1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1},
+			{1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1},
+			{1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1},
+			{1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			{1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1},
+			{1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 		},
