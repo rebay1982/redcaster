@@ -1,14 +1,16 @@
-package main
+package render
 
 import (
 	"math"
-	//"fmt"
+
 	"testing"
+
+	"github.com/rebay1982/redcaster/internal/game"
 )
 
 func Test_RendererCheckWallCollision(t *testing.T) {
-	game := Game{
-		gameMap: [16][16]int{
+	game := game.Game{
+		GameMap: [16][16]int{
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1},
@@ -147,14 +149,14 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 			pAngle:       0.0,
 			fov:          64.0,
 			screenColumn: FB_WIDTH - 1, // -1 because screen columns are 0 based.
-			expected:     328.1,
+			expected:     328.080535, 	// Uses precomputed values for FOV of 64.
 		},
 		{
 			name:         "player_look_0_column_half_width",
 			pAngle:       0.0,
 			fov:          64.0,
-			screenColumn: FB_WIDTH>>1 - 1, // -1 because screen columns are 0 based.
-			expected:     0.1,
+			screenColumn: FB_WIDTH>>1,
+			expected:     0.0,
 		},
 		{
 			name:         "player_look_90_column_0",
@@ -168,14 +170,14 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 			pAngle:       90.0,
 			fov:          64.0,
 			screenColumn: FB_WIDTH - 1, // -1 because screen columns are 0 based.
-			expected:     58.1,
+			expected:     58.080535,
 		},
 		{
 			name:         "player_look_90_half_width",
 			pAngle:       90.0,
 			fov:          64.0,
-			screenColumn: FB_WIDTH>>1 - 1, // -1 because screen columns are 0 based.
-			expected:     90.1,
+			screenColumn: FB_WIDTH>>1,
+			expected:     90.0,
 		},
 		{
 			name:         "player_look_350_column_0",
@@ -188,16 +190,16 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			game := Game{
-				playerAngle: tc.pAngle,
-				fov:         tc.fov,
+			game := game.Game{
+				PlayerAngle: tc.pAngle,
+				Fov:         tc.fov,
 			}
 
 			r := NewRenderer(&game)
 
 			got := r.computeRayAngle(tc.screenColumn)
 
-			if !aproximately(tc.expected, got) {
+			if !approximately(tc.expected, got) {
 				t.Errorf("Expected %f, got %f", tc.expected, got)
 			}
 		})
@@ -205,8 +207,8 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 }
 
 func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
-	game := Game{
-		gameMap: [16][16]int{
+	game := game.Game{
+		GameMap: [16][16]int{
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -423,7 +425,7 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 			//fmt.Println(tc.name)
 			got := r.computeVerticalCollisionRayLength(tc.pX, tc.pY, tc.rAngle)
 
-			if !aproximately(tc.expected, got) {
+			if !approximately(tc.expected, got) {
 				t.Errorf("Expected %f, got %f", tc.expected, got)
 			}
 		})
@@ -431,8 +433,8 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 }
 
 func Test_RendererCalculateHorizontalCollisionRayLength(t *testing.T) {
-	game := Game{
-		gameMap: [16][16]int{
+	game := game.Game{
+		GameMap: [16][16]int{
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -640,16 +642,16 @@ func Test_RendererCalculateHorizontalCollisionRayLength(t *testing.T) {
 			r := NewRenderer(&game)
 
 			//fmt.Println(tc.name)
-			got := r.calculateHorizontalCollisionRayLength(tc.pX, tc.pY, tc.rAngle)
+			got := r.computeHorizontalCollisionRayLength(tc.pX, tc.pY, tc.rAngle)
 
-			if !aproximately(tc.expected, got) {
+			if !approximately(tc.expected, got) {
 				t.Errorf("Expected %f, got %f", tc.expected, got)
 			}
 		})
 	}
 }
 
-func aproximately(x, y float64) bool {
+func approximately(x, y float64) bool {
 	const tolerance = 0.000001
 	epsilon := math.Nextafter(1.0, 2.0) - 1.0
 	diff := math.Abs(x - y)
