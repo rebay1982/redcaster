@@ -6,7 +6,7 @@ import (
 
 	"github.com/rebay1982/redcaster/internal/game"
 	"github.com/rebay1982/redcaster/internal/input"
-	render "github.com/rebay1982/redcaster/internal/renderer"
+	"github.com/rebay1982/redcaster/internal/render"
 
 	rp "github.com/rebay1982/redpix"
 )
