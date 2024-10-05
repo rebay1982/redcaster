@@ -1,10 +1,11 @@
 package main
 
 import (
+	"flag"
 	"time"
 
-	"github.com/rebay1982/redcaster/internal/input"
 	"github.com/rebay1982/redcaster/internal/game"
+	"github.com/rebay1982/redcaster/internal/input"
 	render "github.com/rebay1982/redcaster/internal/renderer"
 
 	rp "github.com/rebay1982/redpix"
@@ -14,9 +15,17 @@ const (
 	WINDOW_TITLE  = "RedCaster"
 	WINDOW_WIDTH  = 640
 	WINDOW_HEIGHT = 480
-	FB_WIDTH      = 640
-	FB_HEIGHT     = 480
+	FOV           = 60.0
 )
+
+func initRendererConfiguration() render.RenderConfiguration {
+	width := flag.Int("w", WINDOW_WIDTH, "Window width in pixels.")
+	height := flag.Int("h", WINDOW_HEIGHT, "Window height in pixels.")
+	fov := flag.Float64("f", FOV, "Field of view in degrees.")
+
+	flag.Parse()
+	return render.NewRenderConfiguration(*width, *height, *fov)
+}
 
 func main() {
 	inputHandler := input.NewInputHandler()
@@ -24,7 +33,6 @@ func main() {
 		PlayerX:     5.0,
 		PlayerY:     5.0,
 		PlayerAngle: 0.0,
-		Fov:         64.0, // 64 because each pixel column (640) will be equal to 0.1 degrees.
 		GameMap: [16][16]int{
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -45,12 +53,13 @@ func main() {
 		},
 		InputHandler: inputHandler,
 	}
-	renderer := render.NewRenderer(&game)
+	config := initRendererConfiguration()
+	renderer := render.NewRenderer(config, &game)
 
 	winConfig := rp.WindowConfig{
 		Title:     WINDOW_TITLE,
-		Width:     WINDOW_WIDTH,
-		Height:    WINDOW_HEIGHT,
+		Width:     config.GetFbWidth(),
+		Height:    config.GetFbHeight(),
 		Resizable: true,
 		VSync:     true,
 	}

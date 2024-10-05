@@ -8,126 +8,10 @@ import (
 	"github.com/rebay1982/redcaster/internal/game"
 )
 
-func Test_RendererCheckWallCollision(t *testing.T) {
-	game := game.Game{
-		GameMap: [16][16]int{
-			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1},
-			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-		},
-	}
-
-	testCases := []struct {
-		name     string
-		x, y     float64
-		expected bool
-	}{
-		{
-			name:     "x_y_no_collision",
-			x:        1.0,
-			y:        1.0,
-			expected: false,
-		},
-		{
-			name:     "x_y_diff_collision",
-			x:        11.0,
-			y:        2.0,
-			expected: true,
-		},
-		{
-			name:     "x_y_diff_float_collision",
-			x:        11.8,
-			y:        2.9,
-			expected: true,
-		},
-		{
-			name:     "x_y_float_no_collision",
-			x:        1.20,
-			y:        1.45,
-			expected: false,
-		},
-		{
-			name:     "x_y_float_close_no_collision",
-			x:        1.99,
-			y:        1.99,
-			expected: false,
-		},
-		{
-			name:     "x_y_collision",
-			x:        0.0,
-			y:        0.0,
-			expected: true,
-		},
-		{
-			name:     "x_y_float_collision",
-			x:        2.20,
-			y:        2.45,
-			expected: true,
-		},
-		{
-			name:     "x_negative_out_of_bound",
-			x:        -1.0,
-			y:        0.0,
-			expected: true,
-		},
-		{
-			name:     "x_positive_out_of_bound",
-			x:        16.0,
-			y:        0.0,
-			expected: true,
-		},
-		{
-			name:     "y_negative_out_of_bound",
-			x:        0.0,
-			y:        -1.0,
-			expected: true,
-		},
-		{
-			name:     "y_positive_out_of_bound",
-			x:        0.0,
-			y:        16.0,
-			expected: true,
-		},
-		{
-			name:     "x_y_negative_out_of_bound",
-			x:        -1.0,
-			y:        -1.0,
-			expected: true,
-		},
-		{
-			name:     "x_y_positive_out_of_bound",
-			x:        16.0,
-			y:        16.0,
-			expected: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-
-			r := NewRenderer(&game)
-
-			got := r.checkWallCollision(tc.x, tc.y)
-
-			if got != tc.expected {
-				t.Errorf("Expected %t, got %t", tc.expected, got)
-			}
-		})
-	}
-}
+const (
+	FB_WIDTH  = 640
+	FB_HEIGHT = 480
+)
 
 func Test_RendererCalculateRayAngle(t *testing.T) {
 	testCases := []struct {
@@ -149,13 +33,13 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 			pAngle:       0.0,
 			fov:          64.0,
 			screenColumn: FB_WIDTH - 1, // -1 because screen columns are 0 based.
-			expected:     328.080535, 	// Uses precomputed values for FOV of 64.
+			expected:     328.080535,   // Uses precomputed values for FOV of 64.
 		},
 		{
 			name:         "player_look_0_column_half_width",
 			pAngle:       0.0,
 			fov:          64.0,
-			screenColumn: FB_WIDTH>>1,
+			screenColumn: FB_WIDTH >> 1,
 			expected:     0.0,
 		},
 		{
@@ -176,7 +60,7 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 			name:         "player_look_90_half_width",
 			pAngle:       90.0,
 			fov:          64.0,
-			screenColumn: FB_WIDTH>>1,
+			screenColumn: FB_WIDTH >> 1,
 			expected:     90.0,
 		},
 		{
@@ -192,10 +76,9 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			game := game.Game{
 				PlayerAngle: tc.pAngle,
-				Fov:         tc.fov,
 			}
-
-			r := NewRenderer(&game)
+			config := NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, tc.fov)
+			r := NewRenderer(config, &game)
 
 			got := r.computeRayAngle(tc.screenColumn)
 
@@ -420,9 +303,9 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := NewRenderer(&game)
+			config := NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0)
+			r := NewRenderer(config, &game)
 
-			//fmt.Println(tc.name)
 			got := r.computeVerticalCollisionRayLength(tc.pX, tc.pY, tc.rAngle)
 
 			if !approximately(tc.expected, got) {
@@ -639,7 +522,8 @@ func Test_RendererCalculateHorizontalCollisionRayLength(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := NewRenderer(&game)
+			config := NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0)
+			r := NewRenderer(config, &game)
 
 			//fmt.Println(tc.name)
 			got := r.computeHorizontalCollisionRayLength(tc.pX, tc.pY, tc.rAngle)

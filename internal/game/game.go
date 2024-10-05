@@ -1,14 +1,13 @@
 package game
 
 import (
-	"math"
 	"github.com/rebay1982/redcaster/internal/input"
+	"math"
 )
 
 type Game struct {
 	PlayerX, PlayerY float64
 	PlayerAngle      float64
-	Fov              float64
 	GameMap          [16][16]int
 	InputHandler     *input.InputHandler
 }
@@ -70,4 +69,3 @@ func (g Game) CheckWallCollision(x, y float64) bool {
 		return false
 	}
 }
-

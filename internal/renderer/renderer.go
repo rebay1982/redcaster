@@ -1,28 +1,22 @@
 package render
 
 import (
-	"math"
 	"github.com/rebay1982/redcaster/internal/game"
-)
-
-const (
-	WINDOW_TITLE  = "RedCaster"
-	WINDOW_WIDTH  = 640
-	WINDOW_HEIGHT = 480
-	FB_WIDTH      = 640
-	FB_HEIGHT     = 480
+	"math"
 )
 
 type Renderer struct {
 	game          *game.Game
+	config        RenderConfiguration
 	frameBuffer   []uint8
 	rAngleOffsets []float64
 }
 
-func NewRenderer(game *game.Game) *Renderer {
+func NewRenderer(config RenderConfiguration, game *game.Game) *Renderer {
 	r := &Renderer{
 		game:        game,
-		frameBuffer: make([]uint8, FB_WIDTH*FB_HEIGHT*4, FB_WIDTH*FB_HEIGHT*4),
+		config:      config,
+		frameBuffer: make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize()),
 	}
 
 	r.precomputeRayAngleOffsets()
@@ -30,22 +24,28 @@ func NewRenderer(game *game.Game) *Renderer {
 	return r
 }
 
+func (r Renderer) ReconfigureRenderer(config RenderConfiguration) {
+	r.config = config
+	r.frameBuffer = make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize())
+	r.precomputeRayAngleOffsets()
+}
+
 func (r *Renderer) precomputeRayAngleOffsets() {
-	fov := r.game.Fov
-	r.rAngleOffsets = make([]float64, FB_WIDTH)
+	fov := r.config.fieldOfView
+	r.rAngleOffsets = make([]float64, r.config.GetFbWidth())
 
 	fRad := (fov / 2) * math.Pi / 180
 
 	oppositeRefLength := math.Tan(fRad)
-	oppositeStep := oppositeRefLength / float64(FB_WIDTH>>1)
+	oppositeStep := oppositeRefLength / float64(r.config.GetFbWidth()>>1)
 
-	for i := 0; i < FB_WIDTH; i++ {
+	for i := 0; i < r.config.GetFbWidth(); i++ {
 		r.rAngleOffsets[i] = math.Atan(oppositeRefLength-float64(i)*oppositeStep) * 180 / math.Pi
 	}
 }
 
 func (r Renderer) computeWallHeight(x int) (int, bool) {
-	height := float64(FB_HEIGHT)
+	height := float64(r.config.GetFbHeight())
 	horizontalOrientation := false
 
 	rayAngle := r.computeRayAngle(x)
@@ -181,10 +181,10 @@ func (r Renderer) fishEyeCompensation(pAngle, rAngle, rLength float64) float64 {
 }
 
 func (r Renderer) drawCeiling() {
-	height := FB_HEIGHT >> 1
-	for x := 0; x < FB_WIDTH; x++ {
-		for y := FB_HEIGHT - 1; y >= height; y-- {
-			colorIndex := (x + y*FB_WIDTH) * 4
+	height := r.config.GetFbHeight() >> 1
+	for x := 0; x < r.config.GetFbWidth(); x++ {
+		for y := r.config.GetFbHeight() - 1; y >= height; y-- {
+			colorIndex := (x + y*r.config.GetFbWidth()) * 4
 			r.frameBuffer[colorIndex+2] = 0xCC // Blue skies component
 			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
 		}
@@ -192,10 +192,10 @@ func (r Renderer) drawCeiling() {
 }
 
 func (r Renderer) drawFloor() {
-	height := FB_HEIGHT >> 1
-	for x := 0; x < FB_WIDTH; x++ {
+	height := r.config.GetFbHeight() >> 1
+	for x := 0; x < r.config.GetFbWidth(); x++ {
 		for y := height; y >= 0; y-- {
-			colorIndex := (x + y*FB_WIDTH) * 4
+			colorIndex := (x + y*r.config.GetFbWidth()) * 4
 			r.frameBuffer[colorIndex+1] = 0x77 // Green grass component
 			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
 		}
@@ -204,18 +204,18 @@ func (r Renderer) drawFloor() {
 
 func (r Renderer) drawVertical(x int) {
 	h, o := r.computeWallHeight(x)
-	startHeight := (FB_HEIGHT - h) >> 1
+	startHeight := (r.config.GetFbHeight() - h) >> 1
 
 	for y := startHeight; y < (startHeight + h); y++ {
-		colorIndex := (x + y*FB_WIDTH) * 4
-		colorIntensity := 0xFF
+		colorIndex := (x + y*r.config.GetFbWidth()) * 4
+		colorIntensity := 0xCC
 		if o {
-			colorIntensity = 0xAA
+			colorIntensity = 0x88
 		}
-		r.frameBuffer[colorIndex] = uint8(colorIntensity) // Green component
-		r.frameBuffer[colorIndex+1] = 0x00                // Green component
-		r.frameBuffer[colorIndex+2] = 0x00                // Blue component
-		r.frameBuffer[colorIndex+3] = 0xFF                // Alpha
+		r.frameBuffer[colorIndex] = uint8(colorIntensity)
+		r.frameBuffer[colorIndex+1] = uint8(colorIntensity)
+		r.frameBuffer[colorIndex+2] = uint8(colorIntensity)
+		r.frameBuffer[colorIndex+3] = 0xFF
 	}
 }
 
@@ -234,7 +234,7 @@ func (r Renderer) Draw() []uint8 {
 	r.drawFloor()
 
 	// Draw walls
-	for x := 0; x < FB_WIDTH; x++ {
+	for x := 0; x < r.config.GetFbWidth(); x++ {
 		r.drawVertical(x)
 	}
 
