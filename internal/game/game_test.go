@@ -2,11 +2,13 @@ package game
 
 import (
 	"testing"
+
+	"github.com/rebay1982/redcaster/internal/data"
 )
 
 func Test_RendererCheckWallCollision(t *testing.T) {
-	g := Game{
-		GameMap: [16][16]int{
+	levelData := data.LevelData{
+		Map: [][]int{
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1},
@@ -25,6 +27,7 @@ func Test_RendererCheckWallCollision(t *testing.T) {
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 		},
 	}
+	g := NewGame(levelData, nil)
 
 	testCases := []struct {
 		name     string
