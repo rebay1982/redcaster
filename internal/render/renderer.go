@@ -50,9 +50,9 @@ func (r Renderer) computeWallHeight(x int) (int, bool) {
 
 	rayAngle := r.computeRayAngle(x)
 
-	posX, posY := r.game.PlayerX, r.game.PlayerY
-	vLength := r.computeVerticalCollisionRayLength(posX, posY, rayAngle)
-	hLength := r.computeHorizontalCollisionRayLength(posX, posY, rayAngle)
+	playerCoords := r.game.GetPlayerCoords()
+	vLength := r.computeVerticalCollisionRayLength(playerCoords.PlayerX, playerCoords.PlayerY, rayAngle)
+	hLength := r.computeHorizontalCollisionRayLength(playerCoords.PlayerX, playerCoords.PlayerY, rayAngle)
 	var rLength float64 = vLength
 
 	if hLength < vLength {
@@ -60,7 +60,7 @@ func (r Renderer) computeWallHeight(x int) (int, bool) {
 		rLength = hLength
 	}
 
-	rLength = r.fishEyeCompensation(r.game.PlayerAngle, rayAngle, rLength)
+	rLength = r.fishEyeCompensation(playerCoords.PlayerAngle, rayAngle, rLength)
 	if rLength >= 1 {
 		height = height / rLength
 	}
@@ -78,7 +78,8 @@ Reference for RayAngle:
 				 270
 */
 func (r Renderer) computeRayAngle(x int) float64 {
-	pAng := r.game.PlayerAngle
+	palyerCoords := r.game.GetPlayerCoords()
+	pAng := palyerCoords.PlayerAngle
 
 	rayAngle := pAng + r.rAngleOffsets[x]
 

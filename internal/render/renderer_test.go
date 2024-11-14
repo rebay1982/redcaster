@@ -5,6 +5,7 @@ import (
 
 	"testing"
 
+	"github.com/rebay1982/redcaster/internal/data"
 	"github.com/rebay1982/redcaster/internal/game"
 )
 
@@ -74,9 +75,13 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			game := game.Game{
-				PlayerAngle: tc.pAngle,
+			levelData := data.LevelData{
+				PlayerCoordData: data.PlayerCoordData{
+					PlayerAngle: tc.pAngle,
+				},
 			}
+			game := game.NewGame(levelData, nil)
+
 			config := NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, tc.fov)
 			r := NewRenderer(config, &game)
 
@@ -90,8 +95,8 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 }
 
 func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
-	game := game.Game{
-		GameMap: [16][16]int{
+	levelData := data.LevelData{
+		Map: [][]int{
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -110,6 +115,7 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 		},
 	}
+	game := game.NewGame(levelData, nil)
 
 	testCases := []struct {
 		name     string
@@ -316,8 +322,8 @@ func Test_RendererCalculateVerticalCollisionRayLength(t *testing.T) {
 }
 
 func Test_RendererCalculateHorizontalCollisionRayLength(t *testing.T) {
-	game := game.Game{
-		GameMap: [16][16]int{
+	levelData := data.LevelData{
+		Map: [][]int{
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
 			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -336,6 +342,7 @@ func Test_RendererCalculateHorizontalCollisionRayLength(t *testing.T) {
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
 		},
 	}
+	game := game.NewGame(levelData, nil)
 
 	testCases := []struct {
 		name     string

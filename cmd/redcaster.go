@@ -1,9 +1,12 @@
 package main
 
 import (
-	"flag"
+	"fmt"
+	"os"
 	"time"
 
+	"github.com/rebay1982/redcaster/internal/config"
+	"github.com/rebay1982/redcaster/internal/data"
 	"github.com/rebay1982/redcaster/internal/game"
 	"github.com/rebay1982/redcaster/internal/input"
 	"github.com/rebay1982/redcaster/internal/render"
@@ -11,55 +14,27 @@ import (
 	rp "github.com/rebay1982/redpix"
 )
 
-const (
-	WINDOW_TITLE  = "RedCaster"
-	WINDOW_WIDTH  = 640
-	WINDOW_HEIGHT = 480
-	FOV           = 60.0
-)
-
-func initRendererConfiguration() render.RenderConfiguration {
-	width := flag.Int("w", WINDOW_WIDTH, "Window width in pixels.")
-	height := flag.Int("h", WINDOW_HEIGHT, "Window height in pixels.")
-	fov := flag.Float64("f", FOV, "Field of view in degrees.")
-
-	flag.Parse()
-	return render.NewRenderConfiguration(*width, *height, *fov)
-}
-
 func main() {
-	inputHandler := input.NewInputHandler()
-	game := game.Game{
-		PlayerX:     5.0,
-		PlayerY:     5.0,
-		PlayerAngle: 0.0,
-		GameMap: [16][16]int{
-			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1},
-			{1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1},
-			{1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1},
-			{1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1},
-			{1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 1},
-			{1, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1},
-			{1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-		},
-		InputHandler: inputHandler,
+	appConfig := config.GetAppConfiguration()
+
+	loader := data.NewDataLoader()
+	levelData, err := loader.LoadLevelData(appConfig.DataFile)
+	if err != nil {
+		fmt.Printf("Failed to load data file %s. Aborting.\n", appConfig.DataFile)
+		fmt.Printf("Caused by %v.\n", err)
+		os.Exit(1)
 	}
-	config := initRendererConfiguration()
-	renderer := render.NewRenderer(config, &game)
+
+	inputHandler := input.NewInputHandler()
+	game := game.NewGame(levelData, inputHandler)
+
+	renderConfiguration := appConfig.RenderConfig
+	renderer := render.NewRenderer(renderConfiguration, &game)
 
 	winConfig := rp.WindowConfig{
-		Title:     WINDOW_TITLE,
-		Width:     config.GetFbWidth(),
-		Height:    config.GetFbHeight(),
+		Title:     appConfig.WindowTitle,
+		Width:     renderConfiguration.GetFbWidth(),
+		Height:    renderConfiguration.GetFbHeight(),
 		Resizable: true,
 		VSync:     true,
 	}
