@@ -186,6 +186,8 @@ func (r Renderer) drawCeiling() {
 	for x := 0; x < r.config.GetFbWidth(); x++ {
 		for y := r.config.GetFbHeight() - 1; y >= height; y-- {
 			colorIndex := (x + y*r.config.GetFbWidth()) * 4
+			r.frameBuffer[colorIndex] = 0x00
+			r.frameBuffer[colorIndex+1] = 0x00
 			r.frameBuffer[colorIndex+2] = 0xCC // Blue skies component
 			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
 		}
@@ -197,7 +199,9 @@ func (r Renderer) drawFloor() {
 	for x := 0; x < r.config.GetFbWidth(); x++ {
 		for y := height; y >= 0; y-- {
 			colorIndex := (x + y*r.config.GetFbWidth()) * 4
+			r.frameBuffer[colorIndex] = 0x00
 			r.frameBuffer[colorIndex+1] = 0x77 // Green grass component
+			r.frameBuffer[colorIndex+2] = 0x00
 			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
 		}
 	}
@@ -229,7 +233,7 @@ func (r *Renderer) clearFrameBuffer() {
 
 // Draw draws the game to the frame buffer.
 func (r Renderer) Draw() []uint8 {
-	r.clearFrameBuffer()
+	//r.clearFrameBuffer()
 
 	r.drawCeiling()
 	r.drawFloor()
