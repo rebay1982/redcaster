@@ -15,9 +15,9 @@ const (
 )
 
 type AppConfig struct {
-	WindowTitle string
+	WindowTitle  string
 	RenderConfig render.RenderConfiguration
-	DataFile string	
+	DataFile     string
 }
 
 func GetAppConfiguration() AppConfig {
@@ -30,8 +30,8 @@ func GetAppConfiguration() AppConfig {
 	flag.Parse()
 
 	return AppConfig{
-		WindowTitle: WINDOW_TITLE,
+		WindowTitle:  WINDOW_TITLE,
 		RenderConfig: render.NewRenderConfiguration(*width, *height, *fov),
-		DataFile: *file,
+		DataFile:     *file,
 	}
 }

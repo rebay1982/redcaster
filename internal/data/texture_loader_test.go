@@ -22,7 +22,7 @@ func TestTextureLoader_GetTextureData(t *testing.T) {
 					Name:   "../../assets/test/test-vertical-small.png",
 					Width:  2,
 					Height: 2,
-					Data:   []uint8{
+					Data: []uint8{
 						0x00, 0x00, 0x00, 0xFF,
 						0xFF, 0xFF, 0xFF, 0xFF,
 						0x00, 0x00, 0x00, 0xFF,
@@ -33,7 +33,7 @@ func TestTextureLoader_GetTextureData(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:      "GetTextureData_dual_texture",
+			name: "GetTextureData_dual_texture",
 			filenames: []string{
 				"../../assets/test/test-vertical-small.png",
 				"../../assets/test/test-horizontal-small.png",
@@ -43,7 +43,7 @@ func TestTextureLoader_GetTextureData(t *testing.T) {
 					Name:   "../../assets/test/test-vertical-small.png",
 					Width:  2,
 					Height: 2,
-					Data:   []uint8{
+					Data: []uint8{
 						0x00, 0x00, 0x00, 0xFF,
 						0xFF, 0xFF, 0xFF, 0xFF,
 						0x00, 0x00, 0x00, 0xFF,
@@ -54,7 +54,7 @@ func TestTextureLoader_GetTextureData(t *testing.T) {
 					Name:   "../../assets/test/test-horizontal-small.png",
 					Width:  2,
 					Height: 2,
-					Data:   []uint8{
+					Data: []uint8{
 						0x00, 0x00, 0x00, 0xFF,
 						0x00, 0x00, 0x00, 0xFF,
 						0xFF, 0xFF, 0xFF, 0xFF,
@@ -65,19 +65,19 @@ func TestTextureLoader_GetTextureData(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:      "GetTextureData_bad_filename",
+			name: "GetTextureData_bad_filename",
 			filenames: []string{
 				"../../assets/test/i-dont-exist.png",
 			},
-			want: []TextureData{},
+			want:    []TextureData{},
 			wantErr: true,
 		},
 		{
-			name:      "GetTextureData_bad_format",
+			name: "GetTextureData_bad_format",
 			filenames: []string{
 				"../../assets/test/test-bad-format.png",
 			},
-			want: []TextureData{},
+			want:    []TextureData{},
 			wantErr: true,
 		},
 	}
