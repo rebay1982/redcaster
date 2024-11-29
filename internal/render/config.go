@@ -1,9 +1,10 @@
 package render
 
 type RenderConfiguration struct {
-	fbWidth     int
-	fbHeight    int
-	fieldOfView float64
+	fbWidth        int
+	fbHeight       int
+	fieldOfView    float64
+	textureMapping bool
 }
 
 func NewRenderConfiguration(width, height int, fov float64) RenderConfiguration {
@@ -24,4 +25,8 @@ func (r RenderConfiguration) GetFbWidth() int {
 
 func (r RenderConfiguration) GetFbHeight() int {
 	return r.fbHeight
+}
+
+func (r RenderConfiguration) IsTextureMappingEnabled() bool {
+	return r.textureMapping
 }

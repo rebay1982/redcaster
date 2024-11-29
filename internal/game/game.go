@@ -7,20 +7,16 @@ import (
 )
 
 type Game struct {
-	playerCoords   data.PlayerCoordData
-	textureMapping bool
-	textures       []data.TextureData
-	gameMap        [][]int
-	inputHandler   *input.InputHandler
+	playerCoords data.PlayerCoordData
+	gameMap      [][]int
+	inputHandler *input.InputHandler
 }
 
 func NewGame(levelData data.LevelData, inputHandler *input.InputHandler) Game {
 	return Game{
-		playerCoords:   levelData.GetPlayerCoordData(),
-		textureMapping: levelData.TextureMapping,
-		textures:       levelData.Textures,
-		gameMap:        levelData.GetMapData(),
-		inputHandler:   inputHandler,
+		playerCoords: levelData.GetPlayerCoordData(),
+		gameMap:      levelData.GetMapData(),
+		inputHandler: inputHandler,
 	}
 }
 
@@ -89,8 +85,4 @@ func (g Game) CheckWallCollision(x, y float64) (bool, int) {
 
 func (g Game) GetPlayerCoords() data.PlayerCoordData {
 	return g.playerCoords
-}
-
-func (g Game) UseTextureMapping() bool {
-	return g.textureMapping
 }

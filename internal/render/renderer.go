@@ -1,6 +1,8 @@
 package render
 
 import (
+	"fmt"
+	"github.com/rebay1982/redcaster/internal/data"
 	"github.com/rebay1982/redcaster/internal/game"
 	"math"
 )
@@ -10,13 +12,23 @@ type Renderer struct {
 	config        RenderConfiguration
 	frameBuffer   []uint8
 	rAngleOffsets []float64
+	textureData   []data.TextureData
 }
 
-func NewRenderer(config RenderConfiguration, game *game.Game) *Renderer {
+func NewRenderer(config RenderConfiguration, game *game.Game, textureData []data.TextureData) *Renderer {
+	// Enable texture mapping by default.
+	config.textureMapping = true
 	r := &Renderer{
 		game:        game,
 		config:      config,
 		frameBuffer: make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize()),
+		textureData: textureData,
+	}
+
+	// Only if we have texture data should we enable texture mapping, even if it was explicitly requested.
+	if !(len(textureData) > 0) {
+		fmt.Println("WARN: Requested texture mapping, but no texture data found. Disabling texture mapping")
+		r.config.textureMapping = false
 	}
 
 	r.precomputeRayAngleOffsets()
@@ -41,43 +53,6 @@ func (r *Renderer) precomputeRayAngleOffsets() {
 
 	for i := 0; i < r.config.GetFbWidth(); i++ {
 		r.rAngleOffsets[i] = math.Atan(oppositeRefLength-float64(i)*oppositeStep) * 180 / math.Pi
-	}
-}
-
-func (r Renderer) computeWallRenderingDetails(x int) wallRenderingDetail {
-	// func (r Renderer) computeWallRenderingDetails(x int) (int, int, float64, bool) {
-	height := float64(r.config.GetFbHeight())
-
-	rayAngle := r.computeRayAngle(x)
-	playerCoords := r.game.GetPlayerCoords()
-	vCollision := r.computeVerticalCollision(playerCoords.PlayerX, playerCoords.PlayerY, rayAngle)
-	hCollision := r.computeHorizontalCollision(playerCoords.PlayerX, playerCoords.PlayerY, rayAngle)
-
-	wallType := vCollision.wallType
-	wallOrientation := vCollision.wallOrientation
-	collisionTextCoord := vCollision.rayEnd.y
-	collisionRayLength := vCollision.rayLength
-
-	if hCollision.rayLength < vCollision.rayLength {
-		wallType = hCollision.wallType
-		wallOrientation = hCollision.wallOrientation
-		collisionTextCoord = hCollision.rayEnd.x
-		collisionRayLength = hCollision.rayLength
-	}
-
-	// Fix the projection
-	rLength := r.fishEyeCompensation(playerCoords.PlayerAngle, rayAngle, collisionRayLength)
-
-	// If we're close to the wall, just display the complete height.
-	if rLength >= 1 {
-		height = height / rLength
-	}
-
-	return wallRenderingDetail{
-		wallHeight:                    int(height),
-		wallTextureId:                 wallType,
-		wallOrientation:               wallOrientation,
-		rayCollisionTextureCoordinate: collisionTextCoord,
 	}
 }
 
@@ -239,11 +214,6 @@ func (r Renderer) computeHorizontalCollision(x, y, rAngle float64) collisionDeta
 	}
 }
 
-func (r Renderer) computeTextureColumnCoordinate(textureId int, collisionY float64) int {
-
-	return 0
-}
-
 // FishEyeCompensation compensates for the perspective effect of the ray's angle relative to the player's direction.
 func (r Renderer) fishEyeCompensation(pAngle, rAngle, rLength float64) float64 {
 	rAngleToPlayer := math.Abs(rAngle - pAngle)
@@ -278,23 +248,120 @@ func (r Renderer) drawFloor() {
 	}
 }
 
+func (r Renderer) computeWallRenderingDetails(x int) wallRenderingDetail {
+	height := float64(r.config.GetFbHeight())
+
+	rayAngle := r.computeRayAngle(x)
+	playerCoords := r.game.GetPlayerCoords()
+	vCollision := r.computeVerticalCollision(playerCoords.PlayerX, playerCoords.PlayerY, rayAngle)
+	hCollision := r.computeHorizontalCollision(playerCoords.PlayerX, playerCoords.PlayerY, rayAngle)
+
+	wallType := vCollision.wallType
+	wallOrientation := vCollision.wallOrientation
+	absCollisionTextCoord := vCollision.rayEnd.y
+	collisionRayLength := vCollision.rayLength
+
+	if hCollision.rayLength < vCollision.rayLength {
+		wallType = hCollision.wallType
+		wallOrientation = hCollision.wallOrientation
+		absCollisionTextCoord = hCollision.rayEnd.x
+		collisionRayLength = hCollision.rayLength
+	}
+	// We're only really interested in the factional part of collision coordinate because textures are mapped between
+	//	0 and 1. It has no value to keep the absolute world value of the collision.
+	_, relCollisionTextCoord := math.Modf(absCollisionTextCoord)
+
+	// Fix the projection
+	rLength := r.fishEyeCompensation(playerCoords.PlayerAngle, rayAngle, collisionRayLength)
+
+	// If we're close to the wall, just display the complete height.
+	if rLength >= 1 {
+		height = height / rLength
+	}
+
+	return wallRenderingDetail{
+		wallHeight:                    int(height),
+		wallTextureId:                 wallType,
+		wallOrientation:               wallOrientation,
+		rayCollisionTextureCoordinate: relCollisionTextCoord,
+	}
+}
+
+// TODO: Use << 2 instead of *4
+func (r Renderer) getTextureVerticalToRender(textureId int, renderHeight int, texColumnCoord float64) []uint8 {
+	renderColumnData := make([]uint8, renderHeight*4)
+
+	texture := r.textureData[textureId-1]
+	textHeight := texture.Height
+	texWidth := texture.Width
+
+	textureColumn := int(float64(texWidth) * texColumnCoord)
+
+	// Find the "sampling" ratio for column
+	heightRatio := float64(textHeight) / float64(renderHeight)
+
+	// Skip the last pixel, it will be manually added to make sure we always have the first pixel of the texture column
+	// 	along with the bottom pixel. This will avoid some ugly distortion where some columns of a wall will be missing
+	//	last pixel row.
+	for i := 0; i < (renderHeight - 1); i++ {
+		textureRow := int(float64(i) * heightRatio)
+
+		pixIndex := (textureColumn + (textureRow * texWidth)) * 4
+
+		renderColumnIndex := i * 4
+		renderColumnData[renderColumnIndex] = texture.Data[pixIndex]
+		renderColumnData[renderColumnIndex+1] = texture.Data[pixIndex+1]
+		renderColumnData[renderColumnIndex+2] = texture.Data[pixIndex+2]
+		renderColumnData[renderColumnIndex+3] = texture.Data[pixIndex+3]
+	}
+
+	// Manually copy the last pixel.
+	renderColumnIndex := (renderHeight - 1) * 4
+	pixIndex := (textureColumn + ((textHeight - 1) * texWidth)) * 4
+	renderColumnData[renderColumnIndex] = texture.Data[pixIndex]
+	renderColumnData[renderColumnIndex+1] = texture.Data[pixIndex+1]
+	renderColumnData[renderColumnIndex+2] = texture.Data[pixIndex+2]
+	renderColumnData[renderColumnIndex+3] = texture.Data[pixIndex+3]
+
+	return renderColumnData
+}
+
 func (r Renderer) drawVertical(x int) {
 	renderingDetails := r.computeWallRenderingDetails(x)
 	h := renderingDetails.wallHeight
 	o := renderingDetails.wallOrientation
+	tId := renderingDetails.wallTextureId
+	tCoord := renderingDetails.rayCollisionTextureCoordinate
 
 	startHeight := (r.config.GetFbHeight() - h) >> 1
 
-	for y := startHeight; y < (startHeight + h); y++ {
-		colorIndex := (x + y*r.config.GetFbWidth()) * 4
-		colorIntensity := 0xCC
-		if o == 1 {
-			colorIntensity = 0x88
+	if r.config.IsTextureMappingEnabled() {
+		textureColumn := r.getTextureVerticalToRender(tId, h, tCoord)
+
+		for y := startHeight; y < (startHeight + h); y++ {
+			// Texture pixels need to be drawn from bottom up because of flipped OpenGL coordinate system.
+			//	(0, 0) is bottom left in OpenGL vs being top left in more intuitive coordinate systems.
+			pixIndex := (x + (r.config.GetFbHeight()-1-y)*r.config.GetFbWidth()) * 4
+			textureIndex := (y - startHeight) * 4
+
+			// We devide by two if the orientation is a vertical wall.
+			r.frameBuffer[pixIndex] = textureColumn[textureIndex] >> o
+			r.frameBuffer[pixIndex+1] = textureColumn[textureIndex+1] >> o
+			r.frameBuffer[pixIndex+2] = textureColumn[textureIndex+2] >> o
+			r.frameBuffer[pixIndex+3] = textureColumn[textureIndex+3]
 		}
-		r.frameBuffer[colorIndex] = uint8(colorIntensity)
-		r.frameBuffer[colorIndex+1] = uint8(colorIntensity)
-		r.frameBuffer[colorIndex+2] = uint8(colorIntensity)
-		r.frameBuffer[colorIndex+3] = 0xFF
+	} else {
+		for y := startHeight; y < (startHeight + h); y++ {
+			colorIndex := (x + y*r.config.GetFbWidth()) * 4
+			colorIntensity := 0xCC
+			if o == 1 {
+				colorIntensity = 0x88
+			}
+			r.frameBuffer[colorIndex] = uint8(colorIntensity)
+			r.frameBuffer[colorIndex+1] = uint8(colorIntensity)
+			r.frameBuffer[colorIndex+2] = uint8(colorIntensity)
+			r.frameBuffer[colorIndex+3] = 0xFF
+		}
 	}
 }
 
