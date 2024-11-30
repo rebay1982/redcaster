@@ -229,7 +229,7 @@ func (r Renderer) drawCeiling() {
 			colorIndex := (x + y*r.config.GetFbWidth()) * 4
 			r.frameBuffer[colorIndex] = 0x00
 			r.frameBuffer[colorIndex+1] = 0x00
-			r.frameBuffer[colorIndex+2] = 0xCC // Blue skies component
+			r.frameBuffer[colorIndex+2] = 0x33 // Blue skies component
 			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
 		}
 	}
@@ -240,9 +240,9 @@ func (r Renderer) drawFloor() {
 	for x := 0; x < r.config.GetFbWidth(); x++ {
 		for y := height; y >= 0; y-- {
 			colorIndex := (x + y*r.config.GetFbWidth()) * 4
-			r.frameBuffer[colorIndex] = 0x00
-			r.frameBuffer[colorIndex+1] = 0x77 // Green grass component
-			r.frameBuffer[colorIndex+2] = 0x00
+			r.frameBuffer[colorIndex] = 0x33
+			r.frameBuffer[colorIndex+1] = 0x33
+			r.frameBuffer[colorIndex+2] = 0x33
 			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
 		}
 	}
@@ -258,18 +258,37 @@ func (r Renderer) computeWallRenderingDetails(x int) wallRenderingDetail {
 
 	wallType := vCollision.wallType
 	wallOrientation := vCollision.wallOrientation
-	absCollisionTextCoord := vCollision.rayEnd.y
 	collisionRayLength := vCollision.rayLength
+
+	// We're only really interested in the factional part of collision coordinate because textures are mapped between
+	//	0 and 1. It has no value to keep the absolute world value of the collision.
+	var relCollisionTexCoord float64
+
+	// Validate if were computing the texture collision coordinate for WEST vertical walls. If so, flip the texture
+	//	coordinate so that the normal of the wall is facing towards the player and the texture renders in the correct
+	//	orientation. Failing to do this results in mirrored texture on the vertical axis.
+	if vCollision.rayEnd.x < vCollision.rayStart.x {
+		frac := vCollision.rayEnd.y - float64(int(vCollision.rayEnd.y))
+		relCollisionTexCoord = 0.999999 - frac
+	} else {
+		relCollisionTexCoord = vCollision.rayEnd.y - float64(int(vCollision.rayEnd.y))
+	}
 
 	if hCollision.rayLength < vCollision.rayLength {
 		wallType = hCollision.wallType
 		wallOrientation = hCollision.wallOrientation
-		absCollisionTextCoord = hCollision.rayEnd.x
 		collisionRayLength = hCollision.rayLength
+
+		// Validate if were computing the texture collision coordinate for SOUTH horitontal walls. If so, flip the texture
+		//	coordinate so that the normal of the wall is facing towards the player and the texture renders in the correct
+		//	orientation. Failing to do this results in mirrored texture on the vertical axis.
+		if hCollision.rayEnd.y > hCollision.rayStart.y {
+			frac := hCollision.rayEnd.x - float64(int(hCollision.rayEnd.x))
+			relCollisionTexCoord = 0.999999 - frac
+		} else {
+			relCollisionTexCoord = hCollision.rayEnd.x - float64(int(hCollision.rayEnd.x))
+		}
 	}
-	// We're only really interested in the factional part of collision coordinate because textures are mapped between
-	//	0 and 1. It has no value to keep the absolute world value of the collision.
-	_, relCollisionTextCoord := math.Modf(absCollisionTextCoord)
 
 	// Fix the projection
 	rLength := r.fishEyeCompensation(playerCoords.PlayerAngle, rayAngle, collisionRayLength)
@@ -283,7 +302,7 @@ func (r Renderer) computeWallRenderingDetails(x int) wallRenderingDetail {
 		wallHeight:                    int(height),
 		wallTextureId:                 wallType,
 		wallOrientation:               wallOrientation,
-		rayCollisionTextureCoordinate: relCollisionTextCoord,
+		rayCollisionTextureCoordinate: relCollisionTexCoord,
 	}
 }
 

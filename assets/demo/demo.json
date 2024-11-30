@@ -20,7 +20,9 @@
 		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
 		[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
 	],
-	"textures": [],
+	"textures": [
+		"./assets/demo/brick-256x256.png"
+	],
 	"playerX": 5.0,
 	"playerY": 5.0,
 	"playertAngle": 0.0
