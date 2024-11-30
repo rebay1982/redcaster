@@ -13,7 +13,8 @@
 		[1, 1, 1, 1, 1, 1, 1, 1]
 	],
 	"textures": [
-		"./assets/demo/demo-texture-rgba.png"
+		"./assets/demo/demo-texture-rgba.png",
+		"./assets/demo/brick-256x256.png"
 	],
 	"playerX": 1.0,
 	"playerY": 1.0,
