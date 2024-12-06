@@ -42,15 +42,17 @@ func (g *Game) Update() {
 	pRad := g.playerCoords.PlayerAngle * math.Pi / 180.0
 	deltaX := 0.01 * math.Cos(pRad)
 	deltaY := 0.01 * math.Sin(pRad)
+	colX := deltaX * 10
+	colY := deltaY * 10
 	if inputVector.PlayerForward {
-		if hit, _ := g.CheckWallCollision(g.playerCoords.PlayerX+deltaX, g.playerCoords.PlayerY-deltaY); !hit {
+		if hit, _ := g.CheckWallCollision(g.playerCoords.PlayerX+colX, g.playerCoords.PlayerY-colY); !hit {
 			g.playerCoords.PlayerX += deltaX
 			g.playerCoords.PlayerY -= deltaY
 		}
 	}
 
 	if inputVector.PlayerBackward {
-		if hit, _ := g.CheckWallCollision(g.playerCoords.PlayerX-deltaX, g.playerCoords.PlayerY+deltaY); !hit {
+		if hit, _ := g.CheckWallCollision(g.playerCoords.PlayerX-colX, g.playerCoords.PlayerY+colY); !hit {
 			g.playerCoords.PlayerX -= deltaX
 			g.playerCoords.PlayerY += deltaY
 		}

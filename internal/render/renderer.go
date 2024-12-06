@@ -293,10 +293,9 @@ func (r Renderer) computeWallRenderingDetails(x int) wallRenderingDetail {
 	// Fix the projection
 	rLength := r.fishEyeCompensation(playerCoords.PlayerAngle, rayAngle, collisionRayLength)
 
-	// If we're close to the wall, just display the complete height.
-	if rLength >= 1 {
-		height = height / rLength
-	}
+	// Height will exceed the frame buffer height if we're closer than a ray length of 1 from the wall. This can be locked
+	//	down to FBHeight when texture mapping is diabled since we're applying solid colours.
+	height = height / rLength
 
 	return wallRenderingDetail{
 		wallHeight:                    int(height),
@@ -358,6 +357,18 @@ func (r Renderer) drawVertical(x int) {
 		textureColumn := r.getTextureVerticalToRender(tId, h, tCoord)
 
 		for y := startHeight; y < (startHeight + h); y++ {
+			// Special case when the height of the wall is > than the framebuffer.
+			// Can and will happen when the player is close enough to a wall that the collision ray length is < 1.
+			// Skip if outside top portion of framebuffer
+			if y < 0 {
+				continue
+			}
+
+			// Quit when done drawing whole frame buffer.
+			if y >= r.config.GetFbHeight() {
+				break
+			}
+
 			// Texture pixels need to be drawn from bottom up because of flipped OpenGL coordinate system.
 			//	(0, 0) is bottom left in OpenGL vs being top left in more intuitive coordinate systems.
 			pixIndex := (x + (r.config.GetFbHeight()-1-y)*r.config.GetFbWidth()) * 4
@@ -371,6 +382,18 @@ func (r Renderer) drawVertical(x int) {
 		}
 	} else {
 		for y := startHeight; y < (startHeight + h); y++ {
+			// Special case when the height of the wall is > than the framebuffer.
+			// Can and will happen when the player is close enough to a wall that the collision ray length is < 1.
+			// Skip if outside top portion of framebuffer
+			if y < 0 {
+				continue
+			}
+
+			// Quit when done drawing whole frame buffer.
+			if y >= r.config.GetFbHeight() {
+				break
+			}
+
 			colorIndex := (x + y*r.config.GetFbWidth()) * 4
 			colorIntensity := 0xCC
 			if o == 1 {
