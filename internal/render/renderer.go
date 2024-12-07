@@ -8,21 +8,23 @@ import (
 )
 
 type Renderer struct {
-	game          *game.Game
-	config        RenderConfiguration
-	frameBuffer   []uint8
-	rAngleOffsets []float64
-	textureData   []data.TextureData
+	game                  *game.Game
+	config                RenderConfiguration
+	frameBuffer           []uint8
+	rAngleOffsets         []float64
+	textureData           []data.TextureData
+	textureVerticalBuffer []uint8
 }
 
 func NewRenderer(config RenderConfiguration, game *game.Game, textureData []data.TextureData) *Renderer {
 	// Enable texture mapping by default.
 	config.textureMapping = true
 	r := &Renderer{
-		game:        game,
-		config:      config,
-		frameBuffer: make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize()),
-		textureData: textureData,
+		game:                  game,
+		config:                config,
+		frameBuffer:           make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize()),
+		textureData:           textureData,
+		textureVerticalBuffer: make([]byte, config.fbHeight<<2),
 	}
 
 	// Only if we have texture data should we enable texture mapping, even if it was explicitly requested.
@@ -305,43 +307,50 @@ func (r Renderer) computeWallRenderingDetails(x int) wallRenderingDetail {
 	}
 }
 
-// TODO: Use << 2 instead of *4
 func (r Renderer) getTextureVerticalToRender(textureId int, renderHeight int, texColumnCoord float64) []uint8 {
-	renderColumnData := make([]uint8, renderHeight*4)
+	texVertBuffer := r.textureVerticalBuffer
 
+	// Get texture data
 	texture := r.textureData[textureId-1]
-	textHeight := texture.Height
+	texHeight := texture.Height
 	texWidth := texture.Width
+	texColumn := int(float64(texWidth) * texColumnCoord)
 
-	textureColumn := int(float64(texWidth) * texColumnCoord)
+	// Find the "sampling" ratio for column. The "step".
+	texToTexVertBufferHeightRatio := float64(texHeight) / float64(renderHeight)
 
-	// Find the "sampling" ratio for column
-	heightRatio := float64(textHeight) / float64(renderHeight)
+	fullRH := renderHeight
+	halfRH := fullRH >> 1
+	fullTBH := r.config.GetFbHeight()
+	halfTBH := fullTBH >> 1
 
-	// Skip the last pixel, it will be manually added to make sure we always have the first pixel of the texture column
-	// 	along with the bottom pixel. This will avoid some ugly distortion where some columns of a wall will be missing
-	//	last pixel row.
-	for i := 0; i < (renderHeight - 1); i++ {
-		textureRow := int(float64(i) * heightRatio)
+	for i := 0; i < halfRH && i < halfTBH; i++ {
+		rhIndexNeg := (halfRH - i)
+		rhIndexPos := (halfRH + i)
+		tvbIndexNeg := (halfTBH - i)
+		tvbIndexPos := (halfTBH + i)
 
-		pixIndex := (textureColumn + (textureRow * texWidth)) * 4
+		// Sample from texture
+		textureRowNeg := int(float64(rhIndexNeg) * texToTexVertBufferHeightRatio)
+		textureRowPos := int(float64(rhIndexPos) * texToTexVertBufferHeightRatio)
 
-		renderColumnIndex := i * 4
-		renderColumnData[renderColumnIndex] = texture.Data[pixIndex]
-		renderColumnData[renderColumnIndex+1] = texture.Data[pixIndex+1]
-		renderColumnData[renderColumnIndex+2] = texture.Data[pixIndex+2]
-		renderColumnData[renderColumnIndex+3] = texture.Data[pixIndex+3]
+		// Write from texture to texture vertical buffer.
+		texPixIndex := (texColumn + (textureRowNeg * texWidth)) << 2
+		tvbPixIndex := tvbIndexNeg << 2
+		texVertBuffer[tvbPixIndex] = texture.Data[texPixIndex]
+		texVertBuffer[tvbPixIndex+1] = texture.Data[texPixIndex+1]
+		texVertBuffer[tvbPixIndex+2] = texture.Data[texPixIndex+2]
+		texVertBuffer[tvbPixIndex+3] = texture.Data[texPixIndex+3]
+
+		texPixIndex = (texColumn + (textureRowPos * texWidth)) << 2
+		tvbPixIndex = tvbIndexPos << 2
+		texVertBuffer[tvbPixIndex] = texture.Data[texPixIndex]
+		texVertBuffer[tvbPixIndex+1] = texture.Data[texPixIndex+1]
+		texVertBuffer[tvbPixIndex+2] = texture.Data[texPixIndex+2]
+		texVertBuffer[tvbPixIndex+3] = texture.Data[texPixIndex+3]
 	}
 
-	// Manually copy the last pixel.
-	renderColumnIndex := (renderHeight - 1) * 4
-	pixIndex := (textureColumn + ((textHeight - 1) * texWidth)) * 4
-	renderColumnData[renderColumnIndex] = texture.Data[pixIndex]
-	renderColumnData[renderColumnIndex+1] = texture.Data[pixIndex+1]
-	renderColumnData[renderColumnIndex+2] = texture.Data[pixIndex+2]
-	renderColumnData[renderColumnIndex+3] = texture.Data[pixIndex+3]
-
-	return renderColumnData
+	return texVertBuffer
 }
 
 func (r Renderer) drawVertical(x int) {
@@ -351,28 +360,23 @@ func (r Renderer) drawVertical(x int) {
 	tId := renderingDetails.wallTextureId
 	tCoord := renderingDetails.rayCollisionTextureCoordinate
 
-	startHeight := (r.config.GetFbHeight() - h) >> 1
+	renderHeightStart := (r.config.GetFbHeight() - h) >> 1
+	renderHeightEnd := (renderHeightStart + h)
+
+	if renderHeightStart < 0 {
+		renderHeightStart = 0
+		renderHeightEnd = r.config.GetFbHeight()
+	}
 
 	if r.config.IsTextureMappingEnabled() {
 		textureColumn := r.getTextureVerticalToRender(tId, h, tCoord)
 
-		for y := startHeight; y < (startHeight + h); y++ {
-			// Special case when the height of the wall is > than the framebuffer.
-			// Can and will happen when the player is close enough to a wall that the collision ray length is < 1.
-			// Skip if outside top portion of framebuffer
-			if y < 0 {
-				continue
-			}
-
-			// Quit when done drawing whole frame buffer.
-			if y >= r.config.GetFbHeight() {
-				break
-			}
+		for y := renderHeightStart; y < renderHeightEnd; y++ {
 
 			// Texture pixels need to be drawn from bottom up because of flipped OpenGL coordinate system.
 			//	(0, 0) is bottom left in OpenGL vs being top left in more intuitive coordinate systems.
 			pixIndex := (x + (r.config.GetFbHeight()-1-y)*r.config.GetFbWidth()) * 4
-			textureIndex := (y - startHeight) * 4
+			textureIndex := (y) * 4
 
 			// We devide by two if the orientation is a vertical wall.
 			r.frameBuffer[pixIndex] = textureColumn[textureIndex] >> o
@@ -381,7 +385,7 @@ func (r Renderer) drawVertical(x int) {
 			r.frameBuffer[pixIndex+3] = textureColumn[textureIndex+3]
 		}
 	} else {
-		for y := startHeight; y < (startHeight + h); y++ {
+		for y := renderHeightStart; y < (renderHeightStart + h); y++ {
 			// Special case when the height of the wall is > than the framebuffer.
 			// Can and will happen when the player is close enough to a wall that the collision ray length is < 1.
 			// Skip if outside top portion of framebuffer
