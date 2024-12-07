@@ -229,11 +229,19 @@ func (r Renderer) drawCeiling() {
 	height := r.config.GetFbHeight() >> 1
 	for x := 0; x < r.config.GetFbWidth(); x++ {
 		for y := r.config.GetFbHeight() - 1; y >= height; y-- {
-			colorIndex := (x + y*r.config.GetFbWidth()) * 4
-			r.frameBuffer[colorIndex] = 0x00
-			r.frameBuffer[colorIndex+1] = 0x00
-			r.frameBuffer[colorIndex+2] = 0x33 // Blue skies component
+			distance := float64(r.config.GetFbHeight()) / float64((y-height)<<1)
+			ceilingColor := r.shadow(0x66, distance, 0)
+
+			colorIndex := (x + y*r.config.GetFbWidth()) << 2
+
+			r.frameBuffer[colorIndex] = ceilingColor
+			r.frameBuffer[colorIndex+1] = ceilingColor
+			r.frameBuffer[colorIndex+2] = ceilingColor
 			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
+			//r.frameBuffer[colorIndex] = 0x00
+			//r.frameBuffer[colorIndex+1] = 0x00
+			//r.frameBuffer[colorIndex+2] = 0x33 // Blue skies component
+			//r.frameBuffer[colorIndex+3] = 0xFF // Alpha
 		}
 	}
 }
@@ -242,10 +250,14 @@ func (r Renderer) drawFloor() {
 	height := r.config.GetFbHeight() >> 1
 	for x := 0; x < r.config.GetFbWidth(); x++ {
 		for y := height; y >= 0; y-- {
-			colorIndex := (x + y*r.config.GetFbWidth()) * 4
-			r.frameBuffer[colorIndex] = 0x33
-			r.frameBuffer[colorIndex+1] = 0x33
-			r.frameBuffer[colorIndex+2] = 0x33
+			distance := float64(r.config.GetFbHeight()) / float64(r.config.GetFbHeight()-(y<<1))
+			floorColor := r.shadow(0x66, distance, 0)
+
+			colorIndex := (x + y*r.config.GetFbWidth()) << 2
+
+			r.frameBuffer[colorIndex] = floorColor
+			r.frameBuffer[colorIndex+1] = floorColor
+			r.frameBuffer[colorIndex+2] = floorColor
 			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
 		}
 	}
@@ -358,10 +370,26 @@ func (r Renderer) getTextureVerticalToRender(textureId int, renderHeight int, te
 	return texVertBuffer
 }
 
+func (r Renderer) shadow(original uint8, distance float64, orientation int) uint8 {
+	shadowMaxDist := 2.0
+
+	if distance > shadowMaxDist {
+		return 0
+	}
+	shadowFactor := (shadowMaxDist - distance) / shadowMaxDist
+
+	if orientation > 0 {
+		return uint8(float64(original) * shadowFactor * 0.9)
+	} else {
+		return uint8(float64(original) * shadowFactor)
+	}
+}
+
 func (r Renderer) drawVertical(x int) {
 	renderingDetails := r.computeWallRenderingDetails(x)
 	h := renderingDetails.wallHeight
 	o := renderingDetails.wallOrientation
+	d := renderingDetails.wallDistance
 	tId := renderingDetails.wallTextureId
 	tCoord := renderingDetails.rayCollisionTextureCoordinate
 
@@ -386,9 +414,9 @@ func (r Renderer) drawVertical(x int) {
 			textureIndex := y << 2
 
 			// We devide by two if the orientation is a vertical wall.
-			r.frameBuffer[pixIndex] = textureColumn[textureIndex] >> o
-			r.frameBuffer[pixIndex+1] = textureColumn[textureIndex+1] >> o
-			r.frameBuffer[pixIndex+2] = textureColumn[textureIndex+2] >> o
+			r.frameBuffer[pixIndex] = r.shadow(textureColumn[textureIndex], d, o)
+			r.frameBuffer[pixIndex+1] = r.shadow(textureColumn[textureIndex+1], d, o)
+			r.frameBuffer[pixIndex+2] = r.shadow(textureColumn[textureIndex+2], d, o)
 			r.frameBuffer[pixIndex+3] = textureColumn[textureIndex+3]
 		}
 	} else {
