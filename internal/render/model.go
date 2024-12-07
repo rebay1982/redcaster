@@ -17,6 +17,7 @@ type collisionDetail struct {
 
 type wallRenderingDetail struct {
 	wallHeight      int
+	wallDistance    float64
 	wallTextureId   int
 	wallOrientation int
 

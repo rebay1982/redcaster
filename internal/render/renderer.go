@@ -8,12 +8,13 @@ import (
 )
 
 type Renderer struct {
-	game                  *game.Game
-	config                RenderConfiguration
-	frameBuffer           []uint8
-	rAngleOffsets         []float64
+	game          *game.Game
+	config        RenderConfiguration
+	frameBuffer   []uint8
+	rAngleOffsets []float64
+	// TODO: Create a rendering memory manager
 	textureData           []data.TextureData
-	textureVerticalBuffer []uint8
+	textureVerticalBuffer []uint8 // Reusable texture vertical buffer to sample textures to.
 }
 
 func NewRenderer(config RenderConfiguration, game *game.Game, textureData []data.TextureData) *Renderer {
@@ -301,6 +302,7 @@ func (r Renderer) computeWallRenderingDetails(x int) wallRenderingDetail {
 
 	return wallRenderingDetail{
 		wallHeight:                    int(height),
+		wallDistance:                  rLength,
 		wallTextureId:                 wallType,
 		wallOrientation:               wallOrientation,
 		rayCollisionTextureCoordinate: relCollisionTexCoord,
@@ -316,14 +318,17 @@ func (r Renderer) getTextureVerticalToRender(textureId int, renderHeight int, te
 	texWidth := texture.Width
 	texColumn := int(float64(texWidth) * texColumnCoord)
 
-	// Find the "sampling" ratio for column. The "step".
-	texToTexVertBufferHeightRatio := float64(texHeight) / float64(renderHeight)
+	// Sampling ratio for the texture to texture vertical buffer
+	texToTexVertBufferSampleRatio := float64(texHeight) / float64(renderHeight)
 
 	fullRH := renderHeight
 	halfRH := fullRH >> 1
-	fullTBH := r.config.GetFbHeight()
+	fullTBH := len(texVertBuffer) >> 2
 	halfTBH := fullTBH >> 1
 
+	// Samples the center of the vertical to outer edges. This way seems convoluted but actually simplifies the
+	//	calculations quite a lot and always samples correctly whether the wall height to sample is smaller or larger than
+	//  the frame buffer height (larger happens when the player is close up against a wall).
 	for i := 0; i < halfRH && i < halfTBH; i++ {
 		rhIndexNeg := (halfRH - i)
 		rhIndexPos := (halfRH + i)
@@ -331,10 +336,10 @@ func (r Renderer) getTextureVerticalToRender(textureId int, renderHeight int, te
 		tvbIndexPos := (halfTBH + i)
 
 		// Sample from texture
-		textureRowNeg := int(float64(rhIndexNeg) * texToTexVertBufferHeightRatio)
-		textureRowPos := int(float64(rhIndexPos) * texToTexVertBufferHeightRatio)
+		textureRowNeg := int(float64(rhIndexNeg) * texToTexVertBufferSampleRatio)
+		textureRowPos := int(float64(rhIndexPos) * texToTexVertBufferSampleRatio)
 
-		// Write from texture to texture vertical buffer.
+		// Sample from texture and write to texture vertical buffer.
 		texPixIndex := (texColumn + (textureRowNeg * texWidth)) << 2
 		tvbPixIndex := tvbIndexNeg << 2
 		texVertBuffer[tvbPixIndex] = texture.Data[texPixIndex]
@@ -368,6 +373,8 @@ func (r Renderer) drawVertical(x int) {
 		renderHeightEnd = r.config.GetFbHeight()
 	}
 
+	// TODO: Make drawing the vertical independent of texture mapping being enabled or disabled.
+	//			 ie, make the "getTextureVerticalToRender" handle this.
 	if r.config.IsTextureMappingEnabled() {
 		textureColumn := r.getTextureVerticalToRender(tId, h, tCoord)
 
@@ -375,8 +382,8 @@ func (r Renderer) drawVertical(x int) {
 
 			// Texture pixels need to be drawn from bottom up because of flipped OpenGL coordinate system.
 			//	(0, 0) is bottom left in OpenGL vs being top left in more intuitive coordinate systems.
-			pixIndex := (x + (r.config.GetFbHeight()-1-y)*r.config.GetFbWidth()) * 4
-			textureIndex := (y) * 4
+			pixIndex := (x + (r.config.GetFbHeight()-1-y)*r.config.GetFbWidth()) << 2
+			textureIndex := y << 2
 
 			// We devide by two if the orientation is a vertical wall.
 			r.frameBuffer[pixIndex] = textureColumn[textureIndex] >> o
