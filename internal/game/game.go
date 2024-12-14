@@ -10,6 +10,7 @@ type Game struct {
 	playerCoords data.PlayerCoordData
 	gameMap      [][]int
 	inputHandler *input.InputHandler
+	shadowDistance float64
 }
 
 func NewGame(levelData data.LevelData, inputHandler *input.InputHandler) Game {
@@ -17,6 +18,7 @@ func NewGame(levelData data.LevelData, inputHandler *input.InputHandler) Game {
 		playerCoords: levelData.GetPlayerCoordData(),
 		gameMap:      levelData.GetMapData(),
 		inputHandler: inputHandler,
+		shadowDistance: 6.0,
 	}
 }
 
@@ -87,4 +89,8 @@ func (g Game) CheckWallCollision(x, y float64) (bool, int) {
 
 func (g Game) GetPlayerCoords() data.PlayerCoordData {
 	return g.playerCoords
+}
+
+func (g Game) GetAmbientLighting() float64 {
+	return g.shadowDistance
 }
