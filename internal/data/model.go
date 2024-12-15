@@ -7,8 +7,14 @@ type LevelData struct {
 	Map    [][]int `json:"map"`
 
 	TextureMapping   bool
+
+	// Normal wall textures
 	TextureFilenames []string `json:"textures"`
 	Textures         []TextureData
+
+	// Sky texture
+	SkyTextureFilename string `json:"skyTexture"`
+	SkyTexture			 TextureData
 
 	PlayerCoordData
 }

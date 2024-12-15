@@ -14,10 +14,16 @@ type Renderer struct {
 	rAngleOffsets []float64
 	// TODO: Create a rendering memory manager
 	textureData           []data.TextureData
+	skyTextureData        []data.TextureData
 	textureVerticalBuffer []uint8 // Reusable texture vertical buffer to sample textures to.
 }
 
-func NewRenderer(config RenderConfiguration, game *game.Game, textureData []data.TextureData) *Renderer {
+func NewRenderer(
+	config RenderConfiguration,
+	game *game.Game,
+	textureData []data.TextureData,
+	skyTextureData []data.TextureData) *Renderer {
+
 	// Enable texture mapping by default.
 	config.textureMapping = true
 	r := &Renderer{
@@ -25,6 +31,7 @@ func NewRenderer(config RenderConfiguration, game *game.Game, textureData []data
 		config:                config,
 		frameBuffer:           make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize()),
 		textureData:           textureData,
+		skyTextureData:        skyTextureData,
 		textureVerticalBuffer: make([]byte, config.fbHeight<<2),
 	}
 
@@ -226,14 +233,49 @@ func (r Renderer) fishEyeCompensation(pAngle, rAngle, rLength float64) float64 {
 }
 
 func (r Renderer) drawCeiling() {
-	height := r.config.GetFbHeight() >> 1
-	for x := 0; x < r.config.GetFbWidth(); x++ {
-		for y := r.config.GetFbHeight() - 1; y >= height; y-- {
-			colorIndex := (x + y*r.config.GetFbWidth()) * 4
-			r.frameBuffer[colorIndex] = 0x00
-			r.frameBuffer[colorIndex+1] = 0x00
-			r.frameBuffer[colorIndex+2] = 0x33 // Blue skies component
-			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
+	if len(r.skyTextureData) > 0 {
+		texData := r.skyTextureData[0]
+		texPixData := texData.Data
+
+		// TODO: Render this while we're rendering the walls to avoid rending the same vertical over and over.
+		pAngle := r.game.GetPlayerCoords().PlayerAngle
+		stexStartHIndex := int(float64(texData.Width/360.0) * (360.0 - pAngle))
+		for x := 0; x < r.config.GetFbWidth(); x++ {
+
+			// Compute texture column
+			fbWidth := r.config.GetFbWidth()
+			fbHalfHeight := r.config.GetFbHeight() >> 1
+			fbMaxHeightIndex := r.config.GetFbHeight() - 1
+			stexHIndex := (stexStartHIndex + x) % (texData.Width - 1)
+
+			fmt.Printf("\rpAngle: %.2f; stexStartHIndex: %d; texW: %d;         ",
+				pAngle,
+				stexStartHIndex,
+				texData.Width,
+			)
+
+			for y := fbMaxHeightIndex; y >= fbHalfHeight; y-- {
+				fbIndex := (x + y*fbWidth) << 2
+				stexVIndex := fbMaxHeightIndex - y
+				stexPixIndex := (stexHIndex + stexVIndex*texData.Width) << 2
+
+				// TODO: This will still need vertical scaling if the FB Height / 2 is taller than the texture data.
+				r.frameBuffer[fbIndex] = texPixData[stexPixIndex]
+				r.frameBuffer[fbIndex+1] = texPixData[stexPixIndex+1]
+				r.frameBuffer[fbIndex+2] = texPixData[stexPixIndex+2]
+				r.frameBuffer[fbIndex+3] = 0xFF // Alpha
+			}
+		}
+	} else {
+		height := r.config.GetFbHeight() >> 1
+		for x := 0; x < r.config.GetFbWidth(); x++ {
+			for y := r.config.GetFbHeight() - 1; y >= height; y-- {
+				colorIndex := (x + y*r.config.GetFbWidth()) * 4
+				r.frameBuffer[colorIndex] = 0x00
+				r.frameBuffer[colorIndex+1] = 0x00
+				r.frameBuffer[colorIndex+2] = 0x33 // Blue skies component
+				r.frameBuffer[colorIndex+3] = 0xFF // Alpha
+			}
 		}
 	}
 }
@@ -433,9 +475,9 @@ func (r Renderer) Draw() []uint8 {
 	r.drawFloor()
 
 	// Draw walls
-	for x := 0; x < r.config.GetFbWidth(); x++ {
-		r.drawVertical(x)
-	}
+	//for x := 0; x < r.config.GetFbWidth(); x++ {
+	//	r.drawVertical(x)
+	//}
 
 	return r.frameBuffer
 }
