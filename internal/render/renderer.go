@@ -2,9 +2,11 @@ package render
 
 import (
 	"fmt"
+	"math"
+
 	"github.com/rebay1982/redcaster/internal/data"
 	"github.com/rebay1982/redcaster/internal/game"
-	"math"
+	"github.com/rebay1982/redcaster/internal/utils"
 )
 
 type Renderer struct {
@@ -14,29 +16,64 @@ type Renderer struct {
 	rAngleOffsets []float64
 	// TODO: Create a rendering memory manager
 	textureData           []data.TextureData
+	skyTextureData        []data.TextureData
 	textureVerticalBuffer []uint8 // Reusable texture vertical buffer to sample textures to.
 }
 
-func NewRenderer(config RenderConfiguration, game *game.Game, textureData []data.TextureData) *Renderer {
+func NewRenderer(
+	config RenderConfiguration,
+	game *game.Game,
+	textureData []data.TextureData,
+	skyTextureData []data.TextureData) *Renderer {
+
 	// Enable texture mapping by default.
-	config.textureMapping = true
+	config.EnableTextureMapping()
+	config.EnableSkyTextureMapping()
 	r := &Renderer{
 		game:                  game,
 		config:                config,
 		frameBuffer:           make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize()),
 		textureData:           textureData,
+		skyTextureData:        skyTextureData,
 		textureVerticalBuffer: make([]byte, config.fbHeight<<2),
 	}
 
 	// Only if we have texture data should we enable texture mapping, even if it was explicitly requested.
 	if !(len(textureData) > 0) {
 		fmt.Println("WARN: Requested texture mapping, but no texture data found. Disabling texture mapping")
-		r.config.textureMapping = false
+		r.config.DisableTextureMapping()
+	}
+
+	if !(len(skyTextureData) > 0) {
+		fmt.Println("WARN: Requested sky texture mapping, but no texture data found. Disabling sky texture mapping")
+		r.config.DisableSkyTextureMapping()
+	} else {
+		r.validateSkyTextureConfiguration()
 	}
 
 	r.precomputeRayAngleOffsets()
-
 	return r
+}
+
+// TODO: validate sky texture sizes so that we don't crash at runtime.
+func (r Renderer) validateSkyTextureConfiguration() {
+	texData := r.skyTextureData[0]
+
+	utils.Assert(
+		texData.Height >= (r.config.GetFbHeight()>>1),
+		fmt.Sprintf("Cannot use a sky texture whos height ([%d]) is less than half the configured frame buffer height ([%d]).\n",
+			texData.Height,
+			r.config.fbHeight>>1,
+		),
+	)
+
+	totalVirtTexWidth := int(360 / r.config.GetFieldOfView() * float64(r.config.GetFbWidth()))
+	utils.Assert(totalVirtTexWidth%texData.Width == 0,
+		fmt.Sprintf("The sky texture width needs to be a multiple of [%d], which [%d] is not.\n",
+			totalVirtTexWidth,
+			texData.Width,
+		),
+	)
 }
 
 func (r Renderer) ReconfigureRenderer(config RenderConfiguration) {
@@ -226,14 +263,48 @@ func (r Renderer) fishEyeCompensation(pAngle, rAngle, rLength float64) float64 {
 }
 
 func (r Renderer) drawCeiling() {
-	height := r.config.GetFbHeight() >> 1
-	for x := 0; x < r.config.GetFbWidth(); x++ {
-		for y := r.config.GetFbHeight() - 1; y >= height; y-- {
-			colorIndex := (x + y*r.config.GetFbWidth()) * 4
-			r.frameBuffer[colorIndex] = 0x00
-			r.frameBuffer[colorIndex+1] = 0x00
-			r.frameBuffer[colorIndex+2] = 0x33 // Blue skies component
-			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
+	if r.config.IsSkyTextureMappingEnabled() {
+		texData := r.skyTextureData[0]
+		texPixData := texData.Data
+
+		virtTexWidth := 360 / r.config.GetFieldOfView() * float64(r.config.GetFbWidth())
+
+		// Get left most angle (frame buffer column 0)
+		// Or use direction the player is look at, doesn't really matter.
+		//rAngle := 360 - r.computeRayAngle(0)
+		rAngle := 360 - r.game.GetPlayerCoords().PlayerAngle
+		virtTexStartPosition := int(rAngle/360*virtTexWidth) % texData.Width
+
+		for x := 0; x < r.config.fbWidth; x++ {
+			texVirtColumn := virtTexStartPosition + x
+
+			texHIndex := texVirtColumn % texData.Width
+			fbWidth := r.config.GetFbWidth()
+			fbHalfHeight := r.config.GetFbHeight() >> 1
+			fbMaxHeightIndex := r.config.GetFbHeight() - 1
+
+			for y := fbMaxHeightIndex; y >= fbHalfHeight; y-- {
+				fbIndex := (x + y*fbWidth) << 2
+				stexVIndex := fbMaxHeightIndex - y
+				stexPixIndex := (texHIndex + stexVIndex*texData.Width) << 2
+
+				// TODO: This will still need vertical scaling if the FB Height / 2 is taller than the texture data.
+				r.frameBuffer[fbIndex] = texPixData[stexPixIndex]
+				r.frameBuffer[fbIndex+1] = texPixData[stexPixIndex+1]
+				r.frameBuffer[fbIndex+2] = texPixData[stexPixIndex+2]
+				r.frameBuffer[fbIndex+3] = 0xFF // Alpha
+			}
+		}
+	} else {
+		height := r.config.GetFbHeight() >> 1
+		for x := 0; x < r.config.GetFbWidth(); x++ {
+			for y := r.config.GetFbHeight() - 1; y >= height; y-- {
+				colorIndex := (x + y*r.config.GetFbWidth()) * 4
+				r.frameBuffer[colorIndex] = 0x00
+				r.frameBuffer[colorIndex+1] = 0x00
+				r.frameBuffer[colorIndex+2] = 0x33 // Blue skies component
+				r.frameBuffer[colorIndex+3] = 0xFF // Alpha
+			}
 		}
 	}
 }

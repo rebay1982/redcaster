@@ -6,9 +6,15 @@ type LevelData struct {
 	Height int     `json:"height"`
 	Map    [][]int `json:"map"`
 
-	TextureMapping   bool
+	TextureMapping bool
+
+	// Normal wall textures
 	TextureFilenames []string `json:"textures"`
 	Textures         []TextureData
+
+	// Sky texture
+	SkyTextureFilename string `json:"skyTexture"`
+	SkyTexture         TextureData
 
 	PlayerCoordData
 }

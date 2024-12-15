@@ -83,7 +83,7 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 			game := game.NewGame(levelData, nil)
 
 			config := NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, tc.fov)
-			r := NewRenderer(config, &game, []data.TextureData{})
+			r := NewRenderer(config, &game, []data.TextureData{}, []data.TextureData{})
 
 			got := r.computeRayAngle(tc.screenColumn)
 
@@ -622,7 +622,7 @@ func Test_RendererCalculateVerticalCollision(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			config := NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0)
-			r := NewRenderer(config, &game, []data.TextureData{})
+			r := NewRenderer(config, &game, []data.TextureData{}, []data.TextureData{})
 
 			got := r.computeVerticalCollision(tc.pX, tc.pY, tc.rAngle)
 
@@ -1172,7 +1172,7 @@ func Test_RendererCalculateHorizontalCollision(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			config := NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0)
-			r := NewRenderer(config, &game, []data.TextureData{})
+			r := NewRenderer(config, &game, []data.TextureData{}, []data.TextureData{})
 
 			got := r.computeHorizontalCollision(tc.pX, tc.pY, tc.rAngle)
 
@@ -1211,6 +1211,82 @@ func Test_RendererCalculateHorizontalCollision(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TODO: Make this a table test
+func Test_RendererValidateSkyTextureConfiguration(t *testing.T) {
+	t.Run("valid_texture", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("Not expecting a panic, recovered %v", r)
+			}
+		}()
+
+		renderer := Renderer{
+			skyTextureData: []data.TextureData{
+				{
+					Width:  100,
+					Height: 100,
+					Data:   []uint8{},
+				},
+			},
+			config: RenderConfiguration{
+				fbWidth:     100,
+				fbHeight:    50,
+				fieldOfView: 90.0,
+			},
+		}
+
+		renderer.validateSkyTextureConfiguration()
+	})
+
+	t.Run("invalid_texture_height", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Expected a panic, none recovered.")
+			}
+		}()
+		renderer := Renderer{
+			skyTextureData: []data.TextureData{
+				{
+					Width:  100,
+					Height: 50,
+					Data:   []uint8{},
+				},
+			},
+			config: RenderConfiguration{
+				fbWidth:     100,
+				fbHeight:    200,
+				fieldOfView: 90.0,
+			},
+		}
+
+		renderer.validateSkyTextureConfiguration()
+	})
+
+	t.Run("invalid_texture_width", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Errorf("Expected a panic, none recovered.")
+			}
+		}()
+		renderer := Renderer{
+			skyTextureData: []data.TextureData{
+				{
+					Width:  123,
+					Height: 50,
+					Data:   []uint8{},
+				},
+			},
+			config: RenderConfiguration{
+				fbWidth:     100,
+				fbHeight:    100,
+				fieldOfView: 90.0,
+			},
+		}
+
+		renderer.validateSkyTextureConfiguration()
+	})
 }
 
 func approximately(x, y float64) bool {
