@@ -71,6 +71,13 @@ func Test_DataLoader_DecodeLevelDataFile(t *testing.T) {
 						Data:   []uint8{0x00, 0x00, 0x00, 0xFF},
 					},
 				},
+				SkyTextureFilename: "../../assets/test/test-black-pixel.png",
+				SkyTexture: TextureData{
+					Name:   "../../assets/test/test-black-pixel.png",
+					Width:  1,
+					Height: 1,
+					Data:   []uint8{0x00, 0x00, 0x00, 0xFF},
+				},
 				PlayerCoordData: PlayerCoordData{
 					PlayerX:     1.0,
 					PlayerY:     1.0,
@@ -89,6 +96,7 @@ func Test_DataLoader_DecodeLevelDataFile(t *testing.T) {
 				"textures": [
 					"../../assets/test/test-black-pixel.png"
 				],
+				"skyTexture": "../../assets/test/test-black-pixel.png",
 				"playerX": 1.0,
 				"playerY": 1.0,
 				"playerAngle": 45.0
