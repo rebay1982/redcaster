@@ -1213,16 +1213,20 @@ func Test_RendererCalculateHorizontalCollision(t *testing.T) {
 	}
 }
 
-// TODO: Make this a table test
 func Test_RendererValidateSkyTextureConfiguration(t *testing.T) {
-	t.Run("valid_texture", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r != nil {
-				t.Errorf("Not expecting a panic, recovered %v", r)
-			}
-		}()
-
-		renderer := Renderer{
+	testCases := []struct {
+		name           string
+		config         RenderConfiguration
+		skyTextureData []data.TextureData
+		expectPanic    bool
+	}{
+		{
+			name: "valid_texture",
+			config: RenderConfiguration{
+				fbWidth:     100,
+				fbHeight:    50,
+				fieldOfView: 90.0,
+			},
 			skyTextureData: []data.TextureData{
 				{
 					Width:  100,
@@ -1230,23 +1234,15 @@ func Test_RendererValidateSkyTextureConfiguration(t *testing.T) {
 					Data:   []uint8{},
 				},
 			},
+			expectPanic: false,
+		},
+		{
+			name: "invalid_texture_height",
 			config: RenderConfiguration{
 				fbWidth:     100,
-				fbHeight:    50,
+				fbHeight:    200,
 				fieldOfView: 90.0,
 			},
-		}
-
-		renderer.validateSkyTextureConfiguration()
-	})
-
-	t.Run("invalid_texture_height", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("Expected a panic, none recovered.")
-			}
-		}()
-		renderer := Renderer{
 			skyTextureData: []data.TextureData{
 				{
 					Width:  100,
@@ -1254,23 +1250,15 @@ func Test_RendererValidateSkyTextureConfiguration(t *testing.T) {
 					Data:   []uint8{},
 				},
 			},
+			expectPanic: true,
+		},
+		{
+			name: "invalid_texture_width",
 			config: RenderConfiguration{
 				fbWidth:     100,
-				fbHeight:    200,
+				fbHeight:    100,
 				fieldOfView: 90.0,
 			},
-		}
-
-		renderer.validateSkyTextureConfiguration()
-	})
-
-	t.Run("invalid_texture_width", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Errorf("Expected a panic, none recovered.")
-			}
-		}()
-		renderer := Renderer{
 			skyTextureData: []data.TextureData{
 				{
 					Width:  123,
@@ -1278,15 +1266,31 @@ func Test_RendererValidateSkyTextureConfiguration(t *testing.T) {
 					Data:   []uint8{},
 				},
 			},
-			config: RenderConfiguration{
-				fbWidth:     100,
-				fbHeight:    100,
-				fieldOfView: 90.0,
-			},
-		}
+			expectPanic: true,
+		},
+	}
 
-		renderer.validateSkyTextureConfiguration()
-	})
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			defer func() {
+				r := recover()
+				if !tc.expectPanic && r != nil {
+					t.Errorf("Not expecting a panic, recovered %v", r)
+				}
+
+				if tc.expectPanic && r == nil {
+					t.Errorf("Expected a panic, none recovered.")
+				}
+			}()
+
+			renderer := Renderer{
+				config:         tc.config,
+				skyTextureData: tc.skyTextureData,
+			}
+
+			renderer.validateSkyTextureConfiguration()
+		})
+	}
 }
 
 func approximately(x, y float64) bool {

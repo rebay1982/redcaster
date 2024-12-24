@@ -270,7 +270,7 @@ func (r Renderer) drawCeiling() {
 		virtTexWidth := 360 / r.config.GetFieldOfView() * float64(r.config.GetFbWidth())
 
 		// Get left most angle (frame buffer column 0)
-		// Or use direction the player is look at, doesn't really matter.
+		// Or use direction the player is looking to, doesn't really matter.
 		//rAngle := 360 - r.computeRayAngle(0)
 		rAngle := 360 - r.game.GetPlayerCoords().PlayerAngle
 		virtTexStartPosition := int(rAngle/360*virtTexWidth) % texData.Width
