@@ -29,12 +29,7 @@ func main() {
 	game := game.NewGame(levelData, inputHandler)
 
 	renderConfiguration := appConfig.RenderConfig
-
-	skyTextures := []data.TextureData{}
-	if levelData.SkyTextureFilename != "" {
-		skyTextures = append(skyTextures, levelData.SkyTexture)
-	}
-	renderer := render.NewRenderer(renderConfiguration, &game, levelData.Textures, skyTextures)
+	renderer := render.NewRenderer(renderConfiguration, &game, &levelData)
 
 	winConfig := rp.WindowConfig{
 		Title:     appConfig.WindowTitle,

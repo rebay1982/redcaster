@@ -16,6 +16,8 @@ type LevelData struct {
 	SkyTextureFilename string `json:"skyTexture"`
 	SkyTexture         TextureData
 
+	AmbientLight float64 `json:"ambientLight"`
+
 	PlayerCoordData
 }
 

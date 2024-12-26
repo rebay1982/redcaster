@@ -25,6 +25,7 @@ func Test_DataLoader_DecodeLevelDataFile(t *testing.T) {
 				},
 				TextureMapping:   false,
 				TextureFilenames: []string{},
+				AmbientLight:     0.5,
 				PlayerCoordData: PlayerCoordData{
 					PlayerX:     1.0,
 					PlayerY:     1.0,
@@ -42,6 +43,7 @@ func Test_DataLoader_DecodeLevelDataFile(t *testing.T) {
 				],
 				"textureFilenames": [],
 				"textures": [],
+				"ambientLight": 0.5,
 				"playerX": 1.0,
 				"playerY": 1.0,
 				"playerAngle": 45.0
