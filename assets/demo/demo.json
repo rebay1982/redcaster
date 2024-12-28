@@ -24,7 +24,7 @@
 		"./assets/demo/brick-256x256.png"
 	],
 	"skyTexture": "./assets/demo/sky-demo-small.png",
-	"ambientLight": 0.0,
+	"ambientLight": 1.0,
 	"playerX": 5.0,
 	"playerY": 5.0,
 	"playertAngle": 0.0

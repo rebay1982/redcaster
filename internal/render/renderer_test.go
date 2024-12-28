@@ -83,7 +83,7 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 			game := game.NewGame(levelData, nil)
 
 			config := NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, tc.fov)
-			r := NewRenderer(config, &game, &levelData)
+			r := NewRenderer(config, &game, levelData)
 
 			got := r.computeRayAngle(tc.screenColumn)
 
@@ -622,7 +622,7 @@ func Test_RendererCalculateVerticalCollision(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			config := NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0)
-			r := NewRenderer(config, &game, &data.LevelData{})
+			r := NewRenderer(config, &game, data.LevelData{})
 
 			got := r.computeVerticalCollision(tc.pX, tc.pY, tc.rAngle)
 
@@ -1172,7 +1172,7 @@ func Test_RendererCalculateHorizontalCollision(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			config := NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0)
-			r := NewRenderer(config, &game, &data.LevelData{})
+			r := NewRenderer(config, &game, data.LevelData{})
 
 			got := r.computeHorizontalCollision(tc.pX, tc.pY, tc.rAngle)
 
@@ -1209,86 +1209,6 @@ func Test_RendererCalculateHorizontalCollision(t *testing.T) {
 			if tc.expected.wallType != got.wallType {
 				t.Errorf("Expected Walltype of %d, got %d", tc.expected.wallType, got.wallType)
 			}
-		})
-	}
-}
-
-func Test_RendererValidateSkyTextureConfiguration(t *testing.T) {
-	testCases := []struct {
-		name           string
-		config         RenderConfiguration
-		skyTextureData []data.TextureData
-		expectPanic    bool
-	}{
-		{
-			name: "valid_texture",
-			config: RenderConfiguration{
-				fbWidth:     100,
-				fbHeight:    50,
-				fieldOfView: 90.0,
-			},
-			skyTextureData: []data.TextureData{
-				{
-					Width:  100,
-					Height: 100,
-					Data:   []uint8{},
-				},
-			},
-			expectPanic: false,
-		},
-		{
-			name: "invalid_texture_height",
-			config: RenderConfiguration{
-				fbWidth:     100,
-				fbHeight:    200,
-				fieldOfView: 90.0,
-			},
-			skyTextureData: []data.TextureData{
-				{
-					Width:  100,
-					Height: 50,
-					Data:   []uint8{},
-				},
-			},
-			expectPanic: true,
-		},
-		{
-			name: "invalid_texture_width",
-			config: RenderConfiguration{
-				fbWidth:     100,
-				fbHeight:    100,
-				fieldOfView: 90.0,
-			},
-			skyTextureData: []data.TextureData{
-				{
-					Width:  123,
-					Height: 50,
-					Data:   []uint8{},
-				},
-			},
-			expectPanic: true,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			defer func() {
-				r := recover()
-				if !tc.expectPanic && r != nil {
-					t.Errorf("Not expecting a panic, recovered %v", r)
-				}
-
-				if tc.expectPanic && r == nil {
-					t.Errorf("Expected a panic, none recovered.")
-				}
-			}()
-
-			renderer := Renderer{
-				config:         tc.config,
-				skyTextureData: tc.skyTextureData,
-			}
-
-			renderer.validateSkyTextureConfiguration()
 		})
 	}
 }

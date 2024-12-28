@@ -1,12 +1,10 @@
 package render
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/rebay1982/redcaster/internal/data"
 	"github.com/rebay1982/redcaster/internal/game"
-	"github.com/rebay1982/redcaster/internal/utils"
 )
 
 type Renderer struct {
@@ -14,78 +12,31 @@ type Renderer struct {
 	config        RenderConfiguration
 	frameBuffer   []uint8
 	rAngleOffsets []float64
+	ambientLight float64
 	// TODO: Create a rendering memory manager
-	ambientLight          float64
-	textureData           []data.TextureData
-	skyTextureData        []data.TextureData
-	textureVerticalBuffer []uint8 // Reusable texture vertical buffer to sample textures to.
+	texManager   TextureManager
 }
 
-func NewRenderer(
-	config RenderConfiguration,
-	game *game.Game,
-	levelData *data.LevelData) *Renderer {
-
-	// Convert single sky texture to an array.
-	skyTextures := []data.TextureData{}
-	if levelData.SkyTextureFilename != "" {
-		skyTextures = append(skyTextures, levelData.SkyTexture)
-	}
-
-	// Enable texture mapping by default.
-	config.EnableTextureMapping()
-	config.EnableSkyTextureMapping()
+// NewRenderer The game is a pointer because we want updates (from game) to the player position to be accessible.
+func NewRenderer(config RenderConfiguration, game *game.Game, levelData data.LevelData) *Renderer {
 	r := &Renderer{
-		game:                  game,
-		config:                config,
-		frameBuffer:           make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize()),
-		ambientLight:          levelData.AmbientLight,
-		textureData:           levelData.Textures,
-		skyTextureData:        skyTextures,
-		textureVerticalBuffer: make([]byte, config.fbHeight<<2),
+		game:         game,
+		config:       config,
+		frameBuffer:  make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize()),
+		ambientLight: levelData.AmbientLight,
 	}
-
-	// Only if we have texture data should we enable texture mapping, even if it was explicitly requested.
-	if !(len(r.textureData) > 0) {
-		fmt.Println("WARN: Requested texture mapping, but no texture data found. Disabling texture mapping")
-		r.config.DisableTextureMapping()
-	}
-
-	if !(len(r.skyTextureData) > 0) {
-		fmt.Println("WARN: Requested sky texture mapping, but no texture data found. Disabling sky texture mapping")
-		r.config.DisableSkyTextureMapping()
-	} else {
-		r.validateSkyTextureConfiguration()
-	}
-
 	r.precomputeRayAngleOffsets()
+	r.texManager = NewTextureManager(config, levelData)
+
 	return r
 }
 
-func (r Renderer) ReconfigureRenderer(config RenderConfiguration) {
+func (r *Renderer) ReconfigureRenderer(config RenderConfiguration) {
 	r.config = config
 	r.frameBuffer = make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize())
 	r.precomputeRayAngleOffsets()
-}
 
-func (r Renderer) validateSkyTextureConfiguration() {
-	texData := r.skyTextureData[0]
-
-	utils.Assert(
-		texData.Height >= (r.config.GetFbHeight()>>1),
-		fmt.Sprintf("Cannot use a sky texture whos height ([%d]) is less than half the configured frame buffer height ([%d]).\n",
-			texData.Height,
-			r.config.fbHeight>>1,
-		),
-	)
-
-	totalVirtTexWidth := int(360 / r.config.GetFieldOfView() * float64(r.config.GetFbWidth()))
-	utils.Assert(totalVirtTexWidth%texData.Width == 0,
-		fmt.Sprintf("The sky texture width needs to be a multiple of [%d], which [%d] is not.\n",
-			totalVirtTexWidth,
-			texData.Width,
-		),
-	)
+	r.texManager.ReconfigureTextureManager(config)
 }
 
 func (r *Renderer) precomputeRayAngleOffsets() {
@@ -272,66 +223,6 @@ func (r Renderer) fishEyeCompensation(pAngle, rAngle, rLength float64) float64 {
 	return math.Abs(rLength * math.Cos(rRad))
 }
 
-func (r Renderer) drawCeiling() {
-	if r.config.IsSkyTextureMappingEnabled() {
-		texData := r.skyTextureData[0]
-		texPixData := texData.Data
-
-		virtTexWidth := 360 / r.config.GetFieldOfView() * float64(r.config.GetFbWidth())
-
-		// Get left most angle (frame buffer column 0)
-		// Or use direction the player is looking to, doesn't really matter.
-		//rAngle := 360 - r.computeRayAngle(0)
-		rAngle := 360 - r.game.GetPlayerCoords().PlayerAngle
-		virtTexStartPosition := int(rAngle/360*virtTexWidth) % texData.Width
-
-		for x := 0; x < r.config.fbWidth; x++ {
-			texVirtColumn := virtTexStartPosition + x
-
-			texHIndex := texVirtColumn % texData.Width
-			fbWidth := r.config.GetFbWidth()
-			fbHalfHeight := r.config.GetFbHeight() >> 1
-			fbMaxHeightIndex := r.config.GetFbHeight() - 1
-
-			for y := fbMaxHeightIndex; y >= fbHalfHeight; y-- {
-				fbIndex := (x + y*fbWidth) << 2
-				stexVIndex := fbMaxHeightIndex - y
-				stexPixIndex := (texHIndex + stexVIndex*texData.Width) << 2
-
-				// TODO: This will still need vertical scaling if the FB Height / 2 is taller than the texture data.
-				r.frameBuffer[fbIndex] = texPixData[stexPixIndex]
-				r.frameBuffer[fbIndex+1] = texPixData[stexPixIndex+1]
-				r.frameBuffer[fbIndex+2] = texPixData[stexPixIndex+2]
-				r.frameBuffer[fbIndex+3] = 0xFF // Alpha
-			}
-		}
-	} else {
-		height := r.config.GetFbHeight() >> 1
-		for x := 0; x < r.config.GetFbWidth(); x++ {
-			for y := r.config.GetFbHeight() - 1; y >= height; y-- {
-				colorIndex := (x + y*r.config.GetFbWidth()) * 4
-				r.frameBuffer[colorIndex] = 0x00
-				r.frameBuffer[colorIndex+1] = 0x00
-				r.frameBuffer[colorIndex+2] = 0x33 // Blue skies component
-				r.frameBuffer[colorIndex+3] = 0xFF // Alpha
-			}
-		}
-	}
-}
-
-func (r Renderer) drawFloor() {
-	height := r.config.GetFbHeight() >> 1
-	for x := 0; x < r.config.GetFbWidth(); x++ {
-		for y := height; y >= 0; y-- {
-			colorIndex := (x + y*r.config.GetFbWidth()) * 4
-			r.frameBuffer[colorIndex] = r.applyLightingEffects(0x33)
-			r.frameBuffer[colorIndex+1] = r.applyLightingEffects(0x33)
-			r.frameBuffer[colorIndex+2] = r.applyLightingEffects(0x33)
-			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
-		}
-	}
-}
-
 func (r Renderer) computeWallRenderingDetails(x int) wallRenderingDetail {
 	height := float64(r.config.GetFbHeight())
 
@@ -390,55 +281,6 @@ func (r Renderer) computeWallRenderingDetails(x int) wallRenderingDetail {
 	}
 }
 
-func (r Renderer) getTextureVerticalToRender(textureId int, renderHeight int, texColumnCoord float64) []uint8 {
-	texVertBuffer := r.textureVerticalBuffer
-
-	// Get texture data
-	texture := r.textureData[textureId-1]
-	texHeight := texture.Height
-	texWidth := texture.Width
-	texColumn := int(float64(texWidth) * texColumnCoord)
-
-	// Sampling ratio for the texture to texture vertical buffer
-	texToTexVertBufferSampleRatio := float64(texHeight) / float64(renderHeight)
-
-	fullRH := renderHeight
-	halfRH := fullRH >> 1
-	fullTBH := len(texVertBuffer) >> 2
-	halfTBH := fullTBH >> 1
-
-	// Samples the center of the vertical to outer edges. This way seems convoluted but actually simplifies the
-	//	calculations quite a lot and always samples correctly whether the wall height to sample is smaller or larger than
-	//  the frame buffer height (larger happens when the player is close up against a wall).
-	for i := 0; i < halfRH && i < halfTBH; i++ {
-		rhIndexNeg := (halfRH - i)
-		rhIndexPos := (halfRH + i)
-		tvbIndexNeg := (halfTBH - i)
-		tvbIndexPos := (halfTBH + i)
-
-		// Sample from texture
-		textureRowNeg := int(float64(rhIndexNeg) * texToTexVertBufferSampleRatio)
-		textureRowPos := int(float64(rhIndexPos) * texToTexVertBufferSampleRatio)
-
-		// Sample from texture and write to texture vertical buffer.
-		texPixIndex := (texColumn + (textureRowNeg * texWidth)) << 2
-		tvbPixIndex := tvbIndexNeg << 2
-		texVertBuffer[tvbPixIndex] = texture.Data[texPixIndex]
-		texVertBuffer[tvbPixIndex+1] = texture.Data[texPixIndex+1]
-		texVertBuffer[tvbPixIndex+2] = texture.Data[texPixIndex+2]
-		texVertBuffer[tvbPixIndex+3] = texture.Data[texPixIndex+3]
-
-		texPixIndex = (texColumn + (textureRowPos * texWidth)) << 2
-		tvbPixIndex = tvbIndexPos << 2
-		texVertBuffer[tvbPixIndex] = texture.Data[texPixIndex]
-		texVertBuffer[tvbPixIndex+1] = texture.Data[texPixIndex+1]
-		texVertBuffer[tvbPixIndex+2] = texture.Data[texPixIndex+2]
-		texVertBuffer[tvbPixIndex+3] = texture.Data[texPixIndex+3]
-	}
-
-	return texVertBuffer
-}
-
 func (r Renderer) drawVertical(x int) {
 	renderingDetails := r.computeWallRenderingDetails(x)
 	h := renderingDetails.wallHeight
@@ -454,47 +296,45 @@ func (r Renderer) drawVertical(x int) {
 		renderHeightEnd = r.config.GetFbHeight()
 	}
 
-	// TODO: Make drawing the vertical independent of texture mapping being enabled or disabled.
-	//			 ie, make the "getTextureVerticalToRender" handle this.
-	if r.config.IsTextureMappingEnabled() {
-		textureColumn := r.getTextureVerticalToRender(tId, h, tCoord)
+	textureVertical := r.texManager.GetTextureVerticalToRender(tId, h, tCoord)
+	for y := renderHeightStart; y < renderHeightEnd; y++ {
 
-		for y := renderHeightStart; y < renderHeightEnd; y++ {
+		// Texture pixels need to be drawn from bottom up because of flipped OpenGL coordinate system.
+		//	(0, 0) is bottom left in OpenGL vs being top left in more intuitive coordinate systems.
+		fbPixIndex := (x + (r.config.GetFbHeight()-1-y)*r.config.GetFbWidth()) << 2
+		textureIndex := y << 2
 
-			// Texture pixels need to be drawn from bottom up because of flipped OpenGL coordinate system.
-			//	(0, 0) is bottom left in OpenGL vs being top left in more intuitive coordinate systems.
-			pixIndex := (x + (r.config.GetFbHeight()-1-y)*r.config.GetFbWidth()) << 2
-			textureIndex := y << 2
+		// We devide by two if the orientation is a vertical wall.
+		r.frameBuffer[fbPixIndex] = r.applyLightingEffects(textureVertical[textureIndex] >> o)
+		r.frameBuffer[fbPixIndex+1] = r.applyLightingEffects(textureVertical[textureIndex+1] >> o)
+		r.frameBuffer[fbPixIndex+2] = r.applyLightingEffects(textureVertical[textureIndex+2] >> o)
+		r.frameBuffer[fbPixIndex+3] = textureVertical[textureIndex+3]
+	}
+}
 
-			// We devide by two if the orientation is a vertical wall.
-			r.frameBuffer[pixIndex] = r.applyLightingEffects(textureColumn[textureIndex] >> o)
-			r.frameBuffer[pixIndex+1] = r.applyLightingEffects(textureColumn[textureIndex+1] >> o)
-			r.frameBuffer[pixIndex+2] = r.applyLightingEffects(textureColumn[textureIndex+2] >> o)
-			r.frameBuffer[pixIndex+3] = textureColumn[textureIndex+3]
-		}
-	} else {
-		for y := renderHeightStart; y < (renderHeightStart + h); y++ {
-			// Special case when the height of the wall is > than the framebuffer.
-			// Can and will happen when the player is close enough to a wall that the collision ray length is < 1.
-			// Skip if outside top portion of framebuffer
-			if y < 0 {
-				continue
-			}
+func (r Renderer) drawCeiling(x int) {
+	rAngle := r.computeRayAngle(x)
+	skyVertTexture := r.texManager.GetSkyTextureVerticalToRender(rAngle)
+	halfHeight := r.config.GetFbHeight() >> 1
+	for y := r.config.GetFbHeight() - 1; y >= halfHeight; y-- {
+		skyTexIndex := ((r.config.GetFbHeight() - 1) - y) << 2
+		fbIndex := (x + y*r.config.GetFbWidth()) << 2
+		r.frameBuffer[fbIndex] = skyVertTexture[skyTexIndex]
+		r.frameBuffer[fbIndex+1] = skyVertTexture[skyTexIndex+1]
+		r.frameBuffer[fbIndex+2] = skyVertTexture[skyTexIndex+2]
+		r.frameBuffer[fbIndex+3] = skyVertTexture[skyTexIndex+3]
+	}
+}
 
-			// Quit when done drawing whole frame buffer.
-			if y >= r.config.GetFbHeight() {
-				break
-			}
-
+func (r Renderer) drawFloor() {
+	height := r.config.GetFbHeight() >> 1
+	for x := 0; x < r.config.GetFbWidth(); x++ {
+		for y := height; y >= 0; y-- {
 			colorIndex := (x + y*r.config.GetFbWidth()) * 4
-			var colorIntensity uint8 = 0xCC
-			if o == 1 {
-				colorIntensity = 0x88
-			}
-			r.frameBuffer[colorIndex] = r.applyLightingEffects(colorIntensity)
-			r.frameBuffer[colorIndex+1] = r.applyLightingEffects(colorIntensity)
-			r.frameBuffer[colorIndex+2] = r.applyLightingEffects(colorIntensity)
-			r.frameBuffer[colorIndex+3] = 0xFF
+			r.frameBuffer[colorIndex] = r.applyLightingEffects(0x33)
+			r.frameBuffer[colorIndex+1] = r.applyLightingEffects(0x33)
+			r.frameBuffer[colorIndex+2] = r.applyLightingEffects(0x33)
+			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
 		}
 	}
 }
@@ -509,12 +349,11 @@ func (r *Renderer) clearFrameBuffer() {
 // Draw draws the game to the frame buffer.
 func (r Renderer) Draw() []uint8 {
 	//r.clearFrameBuffer()
-
-	r.drawCeiling()
 	r.drawFloor()
 
 	// Draw walls
 	for x := 0; x < r.config.GetFbWidth(); x++ {
+		r.drawCeiling(x)
 		r.drawVertical(x)
 	}
 

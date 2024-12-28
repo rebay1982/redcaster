@@ -29,7 +29,7 @@ func main() {
 	game := game.NewGame(levelData, inputHandler)
 
 	renderConfiguration := appConfig.RenderConfig
-	renderer := render.NewRenderer(renderConfiguration, &game, &levelData)
+	renderer := render.NewRenderer(renderConfiguration, &game, levelData)
 
 	winConfig := rp.WindowConfig{
 		Title:     appConfig.WindowTitle,
