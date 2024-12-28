@@ -37,7 +37,7 @@ func (r RenderConfiguration) IsTextureMappingEnabled() bool {
 }
 
 func (r RenderConfiguration) IsSkyTextureMappingEnabled() bool {
-	return r.textureMapping
+	return r.skyTextureMapping
 }
 
 func (r *RenderConfiguration) EnableTextureMapping() {

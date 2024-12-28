@@ -15,6 +15,7 @@ type Renderer struct {
 	frameBuffer   []uint8
 	rAngleOffsets []float64
 	// TODO: Create a rendering memory manager
+	ambientLight          float64
 	textureData           []data.TextureData
 	skyTextureData        []data.TextureData
 	textureVerticalBuffer []uint8 // Reusable texture vertical buffer to sample textures to.
@@ -23,8 +24,13 @@ type Renderer struct {
 func NewRenderer(
 	config RenderConfiguration,
 	game *game.Game,
-	textureData []data.TextureData,
-	skyTextureData []data.TextureData) *Renderer {
+	levelData *data.LevelData) *Renderer {
+
+	// Convert single sky texture to an array.
+	skyTextures := []data.TextureData{}
+	if levelData.SkyTextureFilename != "" {
+		skyTextures = append(skyTextures, levelData.SkyTexture)
+	}
 
 	// Enable texture mapping by default.
 	config.EnableTextureMapping()
@@ -33,18 +39,19 @@ func NewRenderer(
 		game:                  game,
 		config:                config,
 		frameBuffer:           make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize()),
-		textureData:           textureData,
-		skyTextureData:        skyTextureData,
+		ambientLight:          levelData.AmbientLight,
+		textureData:           levelData.Textures,
+		skyTextureData:        skyTextures,
 		textureVerticalBuffer: make([]byte, config.fbHeight<<2),
 	}
 
 	// Only if we have texture data should we enable texture mapping, even if it was explicitly requested.
-	if !(len(textureData) > 0) {
+	if !(len(r.textureData) > 0) {
 		fmt.Println("WARN: Requested texture mapping, but no texture data found. Disabling texture mapping")
 		r.config.DisableTextureMapping()
 	}
 
-	if !(len(skyTextureData) > 0) {
+	if !(len(r.skyTextureData) > 0) {
 		fmt.Println("WARN: Requested sky texture mapping, but no texture data found. Disabling sky texture mapping")
 		r.config.DisableSkyTextureMapping()
 	} else {
@@ -55,7 +62,12 @@ func NewRenderer(
 	return r
 }
 
-// TODO: validate sky texture sizes so that we don't crash at runtime.
+func (r Renderer) ReconfigureRenderer(config RenderConfiguration) {
+	r.config = config
+	r.frameBuffer = make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize())
+	r.precomputeRayAngleOffsets()
+}
+
 func (r Renderer) validateSkyTextureConfiguration() {
 	texData := r.skyTextureData[0]
 
@@ -76,12 +88,6 @@ func (r Renderer) validateSkyTextureConfiguration() {
 	)
 }
 
-func (r Renderer) ReconfigureRenderer(config RenderConfiguration) {
-	r.config = config
-	r.frameBuffer = make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize())
-	r.precomputeRayAngleOffsets()
-}
-
 func (r *Renderer) precomputeRayAngleOffsets() {
 	fov := r.config.fieldOfView
 	r.rAngleOffsets = make([]float64, r.config.GetFbWidth())
@@ -94,6 +100,10 @@ func (r *Renderer) precomputeRayAngleOffsets() {
 	for i := 0; i < r.config.GetFbWidth(); i++ {
 		r.rAngleOffsets[i] = math.Atan(oppositeRefLength-float64(i)*oppositeStep) * 180 / math.Pi
 	}
+}
+
+func (r Renderer) applyLightingEffects(colorComponent uint8) uint8 {
+	return uint8(float64(colorComponent) * r.ambientLight)
 }
 
 /*
@@ -314,9 +324,9 @@ func (r Renderer) drawFloor() {
 	for x := 0; x < r.config.GetFbWidth(); x++ {
 		for y := height; y >= 0; y-- {
 			colorIndex := (x + y*r.config.GetFbWidth()) * 4
-			r.frameBuffer[colorIndex] = 0x33
-			r.frameBuffer[colorIndex+1] = 0x33
-			r.frameBuffer[colorIndex+2] = 0x33
+			r.frameBuffer[colorIndex] = r.applyLightingEffects(0x33)
+			r.frameBuffer[colorIndex+1] = r.applyLightingEffects(0x33)
+			r.frameBuffer[colorIndex+2] = r.applyLightingEffects(0x33)
 			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
 		}
 	}
@@ -457,9 +467,9 @@ func (r Renderer) drawVertical(x int) {
 			textureIndex := y << 2
 
 			// We devide by two if the orientation is a vertical wall.
-			r.frameBuffer[pixIndex] = textureColumn[textureIndex] >> o
-			r.frameBuffer[pixIndex+1] = textureColumn[textureIndex+1] >> o
-			r.frameBuffer[pixIndex+2] = textureColumn[textureIndex+2] >> o
+			r.frameBuffer[pixIndex] = r.applyLightingEffects(textureColumn[textureIndex] >> o)
+			r.frameBuffer[pixIndex+1] = r.applyLightingEffects(textureColumn[textureIndex+1] >> o)
+			r.frameBuffer[pixIndex+2] = r.applyLightingEffects(textureColumn[textureIndex+2] >> o)
 			r.frameBuffer[pixIndex+3] = textureColumn[textureIndex+3]
 		}
 	} else {
@@ -477,13 +487,13 @@ func (r Renderer) drawVertical(x int) {
 			}
 
 			colorIndex := (x + y*r.config.GetFbWidth()) * 4
-			colorIntensity := 0xCC
+			var colorIntensity uint8 = 0xCC
 			if o == 1 {
 				colorIntensity = 0x88
 			}
-			r.frameBuffer[colorIndex] = uint8(colorIntensity)
-			r.frameBuffer[colorIndex+1] = uint8(colorIntensity)
-			r.frameBuffer[colorIndex+2] = uint8(colorIntensity)
+			r.frameBuffer[colorIndex] = r.applyLightingEffects(colorIntensity)
+			r.frameBuffer[colorIndex+1] = r.applyLightingEffects(colorIntensity)
+			r.frameBuffer[colorIndex+2] = r.applyLightingEffects(colorIntensity)
 			r.frameBuffer[colorIndex+3] = 0xFF
 		}
 	}
