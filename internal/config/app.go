@@ -2,8 +2,6 @@ package config
 
 import (
 	"flag"
-
-	"github.com/rebay1982/redcaster/internal/render"
 )
 
 const (
@@ -16,7 +14,7 @@ const (
 
 type AppConfig struct {
 	WindowTitle  string
-	RenderConfig render.RenderConfiguration
+	RenderConfig RenderConfiguration
 	DataFile     string
 }
 
@@ -31,7 +29,7 @@ func GetAppConfiguration() AppConfig {
 
 	return AppConfig{
 		WindowTitle:  WINDOW_TITLE,
-		RenderConfig: render.NewRenderConfiguration(*width, *height, *fov),
+		RenderConfig: NewRenderConfiguration(*width, *height, *fov),
 		DataFile:     *file,
 	}
 }

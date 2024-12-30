@@ -1,4 +1,4 @@
-package render
+package config
 
 type RenderConfiguration struct {
 	fbWidth           int

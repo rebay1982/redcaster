@@ -10,6 +10,7 @@ import (
 	"github.com/rebay1982/redcaster/internal/game"
 	"github.com/rebay1982/redcaster/internal/input"
 	"github.com/rebay1982/redcaster/internal/render"
+	"github.com/rebay1982/redcaster/internal/texture"
 
 	rp "github.com/rebay1982/redpix"
 )
@@ -29,7 +30,9 @@ func main() {
 	game := game.NewGame(levelData, inputHandler)
 
 	renderConfiguration := appConfig.RenderConfig
-	renderer := render.NewRenderer(renderConfiguration, &game, levelData)
+
+	textureManager := texture.NewTextureManager(renderConfiguration, levelData)
+	renderer := render.NewRenderer(renderConfiguration, &game, &textureManager, levelData)
 
 	winConfig := rp.WindowConfig{
 		Title:     appConfig.WindowTitle,
