@@ -3,44 +3,55 @@ package render
 import (
 	"math"
 
+	"github.com/rebay1982/redcaster/internal/config"
 	"github.com/rebay1982/redcaster/internal/data"
-	"github.com/rebay1982/redcaster/internal/game"
 )
 
+type TextureManager interface {
+	Reconfigure(config config.RenderConfiguration)
+	GetTextureVertical(textureId int, renderHeight int, texColumnCoord float64) []uint8
+	GetSkyTextureVertical(rAngle float64) []uint8
+}
+
+type GameManager interface {
+	GetPlayerCoords() data.PlayerCoordData
+	CheckWallCollision(x, y float64) (bool, int)
+}
+
 type Renderer struct {
-	game          *game.Game
-	config        RenderConfiguration
+	gameManager   GameManager
+	config        config.RenderConfiguration
 	frameBuffer   []uint8
 	rAngleOffsets []float64
-	ambientLight float64
+	ambientLight  float64
 	// TODO: Create a rendering memory manager
-	texManager   TextureManager
+	textureManager TextureManager
 }
 
 // NewRenderer The game is a pointer because we want updates (from game) to the player position to be accessible.
-func NewRenderer(config RenderConfiguration, game *game.Game, levelData data.LevelData) *Renderer {
+func NewRenderer(config config.RenderConfiguration, gMngr GameManager, tMngr TextureManager, levelData data.LevelData) *Renderer {
 	r := &Renderer{
-		game:         game,
+		gameManager:  gMngr,
 		config:       config,
 		frameBuffer:  make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize()),
 		ambientLight: levelData.AmbientLight,
 	}
 	r.precomputeRayAngleOffsets()
-	r.texManager = NewTextureManager(config, levelData)
+	r.textureManager = tMngr
 
 	return r
 }
 
-func (r *Renderer) ReconfigureRenderer(config RenderConfiguration) {
+func (r *Renderer) ReconfigureRenderer(config config.RenderConfiguration) {
 	r.config = config
 	r.frameBuffer = make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize())
 	r.precomputeRayAngleOffsets()
 
-	r.texManager.ReconfigureTextureManager(config)
+	r.textureManager.Reconfigure(config)
 }
 
 func (r *Renderer) precomputeRayAngleOffsets() {
-	fov := r.config.fieldOfView
+	fov := r.config.GetFieldOfView()
 	r.rAngleOffsets = make([]float64, r.config.GetFbWidth())
 
 	fRad := (fov / 2) * math.Pi / 180
@@ -67,7 +78,7 @@ Reference for RayAngle:
 				 270
 */
 func (r Renderer) computeRayAngle(x int) float64 {
-	palyerCoords := r.game.GetPlayerCoords()
+	palyerCoords := r.gameManager.GetPlayerCoords()
 	pAng := palyerCoords.PlayerAngle
 
 	rayAngle := pAng + r.rAngleOffsets[x]
@@ -107,7 +118,7 @@ func (r Renderer) computeVerticalCollision(x, y, rAngle float64) collisionDetail
 
 			// Substract rY because 0 on the Y axis is at the top. When moving X to the right (inc), Y will decrement when the
 			//   ray's angle is between 0 and 90.
-			if collision, wall := r.game.CheckWallCollision(x+rX, y-rY); collision {
+			if collision, wall := r.gameManager.CheckWallCollision(x+rX, y-rY); collision {
 				rLength = rX / math.Cos(rRad)
 				wType = wall
 				endCoords.x = x + rX
@@ -129,7 +140,7 @@ func (r Renderer) computeVerticalCollision(x, y, rAngle float64) collisionDetail
 
 			// -0.001 hack on x-xR necessary because collision checking is done on integer values (ex: >= 1, < 2). Ray should
 			//   be < 1 if player is standing right next to a wall in an adjacent square.
-			if collision, wall := r.game.CheckWallCollision(x-rX-0.001, y+rY); collision {
+			if collision, wall := r.gameManager.CheckWallCollision(x-rX-0.001, y+rY); collision {
 				rLength = rX / math.Cos(rRad)
 				wType = wall
 				endCoords.x = x - rX
@@ -175,7 +186,7 @@ func (r Renderer) computeHorizontalCollision(x, y, rAngle float64) collisionDeta
 
 			// -0.001 hack on y-yR necessary because collision checking is done on integer values (ex: >= 1, < 2). Ray should
 			//   be < 1 if player is standing right next to a wall in an adjacent square.
-			if collision, wall := r.game.CheckWallCollision(x+rX, y-rY-0.001); collision {
+			if collision, wall := r.gameManager.CheckWallCollision(x+rX, y-rY-0.001); collision {
 				rLength = rY / math.Sin(rRad)
 				wType = wall
 				endCoords.x = x + rX
@@ -194,7 +205,7 @@ func (r Renderer) computeHorizontalCollision(x, y, rAngle float64) collisionDeta
 
 			// Substract rX because the Tangent is negative from 270 to 360 and positive from 180 to 270, which is the
 			//	 opposite of our reference coordinate system. (it is negative from 180 to 270 and positive from 270 to 360).
-			if collision, wall := r.game.CheckWallCollision(x-rX, y+rY); collision {
+			if collision, wall := r.gameManager.CheckWallCollision(x-rX, y+rY); collision {
 				rLength = rY / math.Sin(rRad)
 				wType = wall
 				endCoords.x = x - rX
@@ -227,7 +238,7 @@ func (r Renderer) computeWallRenderingDetails(x int) wallRenderingDetail {
 	height := float64(r.config.GetFbHeight())
 
 	rayAngle := r.computeRayAngle(x)
-	playerCoords := r.game.GetPlayerCoords()
+	playerCoords := r.gameManager.GetPlayerCoords()
 	vCollision := r.computeVerticalCollision(playerCoords.PlayerX, playerCoords.PlayerY, rayAngle)
 	hCollision := r.computeHorizontalCollision(playerCoords.PlayerX, playerCoords.PlayerY, rayAngle)
 
@@ -296,7 +307,7 @@ func (r Renderer) drawVertical(x int) {
 		renderHeightEnd = r.config.GetFbHeight()
 	}
 
-	textureVertical := r.texManager.GetTextureVerticalToRender(tId, h, tCoord)
+	textureVertical := r.textureManager.GetTextureVertical(tId, h, tCoord)
 	for y := renderHeightStart; y < renderHeightEnd; y++ {
 
 		// Texture pixels need to be drawn from bottom up because of flipped OpenGL coordinate system.
@@ -314,7 +325,7 @@ func (r Renderer) drawVertical(x int) {
 
 func (r Renderer) drawCeiling(x int) {
 	rAngle := r.computeRayAngle(x)
-	skyVertTexture := r.texManager.GetSkyTextureVerticalToRender(rAngle)
+	skyVertTexture := r.textureManager.GetSkyTextureVertical(rAngle)
 	halfHeight := r.config.GetFbHeight() >> 1
 	for y := r.config.GetFbHeight() - 1; y >= halfHeight; y-- {
 		skyTexIndex := ((r.config.GetFbHeight() - 1) - y) << 2

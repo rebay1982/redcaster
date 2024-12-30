@@ -1,21 +1,22 @@
-package render
+package texture
 
 import (
 	"fmt"
 
+	"github.com/rebay1982/redcaster/internal/config"
 	"github.com/rebay1982/redcaster/internal/data"
 	"github.com/rebay1982/redcaster/internal/utils"
 )
 
 type TextureManager struct {
-	config                   RenderConfiguration
+	config                   config.RenderConfiguration
 	textureData              []data.TextureData
 	skyTextureData           []data.TextureData
 	textureVerticalBuffer    []uint8
 	skyTextureVerticalBuffer []uint8
 }
 
-func NewTextureManager(config RenderConfiguration, levelData data.LevelData) TextureManager {
+func NewTextureManager(config config.RenderConfiguration, levelData data.LevelData) TextureManager {
 	// Convert single sky texture to an array.
 	skyTextures := []data.TextureData{}
 	if levelData.SkyTextureFilename != "" {
@@ -50,8 +51,7 @@ func NewTextureManager(config RenderConfiguration, levelData data.LevelData) Tex
 	return manager
 }
 
-// TODO: this also needs a "reload rendering configuration" function
-func (tm *TextureManager) ReconfigureTextureManager(config RenderConfiguration) {
+func (tm *TextureManager) Reconfigure(config config.RenderConfiguration) {
 	tm.config = config
 }
 
@@ -75,7 +75,7 @@ func (tm TextureManager) validateSkyTextureConfiguration() {
 	)
 }
 
-func (tm TextureManager) GetSkyTextureVerticalToRender(rAngle float64) []uint8 {
+func (tm TextureManager) GetSkyTextureVertical(rAngle float64) []uint8 {
 	skyVertBuffer := tm.skyTextureVerticalBuffer
 
 	if tm.config.IsSkyTextureMappingEnabled() {
@@ -111,7 +111,7 @@ func (tm TextureManager) GetSkyTextureVerticalToRender(rAngle float64) []uint8 {
 	return skyVertBuffer
 }
 
-func (tm TextureManager) GetTextureVerticalToRender(textureId int, renderHeight int, texColumnCoord float64) []uint8 {
+func (tm TextureManager) GetTextureVertical(textureId int, renderHeight int, texColumnCoord float64) []uint8 {
 	texVertBuffer := tm.textureVerticalBuffer
 
 	// Get texture data

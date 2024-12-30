@@ -1,25 +1,22 @@
-package render
+package texture
 
 import (
 	"testing"
 
+	"github.com/rebay1982/redcaster/internal/config"
 	"github.com/rebay1982/redcaster/internal/data"
 )
 
 func Test_RendererValidateSkyTextureConfiguration(t *testing.T) {
 	testCases := []struct {
 		name           string
-		config         RenderConfiguration
+		config         config.RenderConfiguration
 		skyTextureData []data.TextureData
 		expectPanic    bool
 	}{
 		{
-			name: "valid_texture",
-			config: RenderConfiguration{
-				fbWidth:     100,
-				fbHeight:    50,
-				fieldOfView: 90.0,
-			},
+			name:   "valid_texture",
+			config: config.NewRenderConfiguration(100, 50, 90.0),
 			skyTextureData: []data.TextureData{
 				{
 					Width:  100,
@@ -30,12 +27,8 @@ func Test_RendererValidateSkyTextureConfiguration(t *testing.T) {
 			expectPanic: false,
 		},
 		{
-			name: "invalid_texture_height",
-			config: RenderConfiguration{
-				fbWidth:     100,
-				fbHeight:    200,
-				fieldOfView: 90.0,
-			},
+			name:   "invalid_texture_height",
+			config: config.NewRenderConfiguration(100, 200, 90.0),
 			skyTextureData: []data.TextureData{
 				{
 					Width:  100,
@@ -46,12 +39,8 @@ func Test_RendererValidateSkyTextureConfiguration(t *testing.T) {
 			expectPanic: true,
 		},
 		{
-			name: "invalid_texture_width",
-			config: RenderConfiguration{
-				fbWidth:     100,
-				fbHeight:    100,
-				fieldOfView: 90.0,
-			},
+			name:   "invalid_texture_width",
+			config: config.NewRenderConfiguration(100, 50, 90.0),
 			skyTextureData: []data.TextureData{
 				{
 					Width:  123,

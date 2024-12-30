@@ -5,6 +5,7 @@ import (
 
 	"testing"
 
+	"github.com/rebay1982/redcaster/internal/config"
 	"github.com/rebay1982/redcaster/internal/data"
 	"github.com/rebay1982/redcaster/internal/game"
 )
@@ -15,6 +16,8 @@ const (
 )
 
 func Test_RendererCalculateRayAngle(t *testing.T) {
+	var tManager TextureManager = nil
+
 	testCases := []struct {
 		name         string
 		pAngle       float64
@@ -81,9 +84,8 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 				},
 			}
 			game := game.NewGame(levelData, nil)
-
-			config := NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, tc.fov)
-			r := NewRenderer(config, &game, levelData)
+			config := config.NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, tc.fov)
+			r := NewRenderer(config, &game, tManager, levelData)
 
 			got := r.computeRayAngle(tc.screenColumn)
 
@@ -95,6 +97,8 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 }
 
 func Test_RendererCalculateVerticalCollision(t *testing.T) {
+	var tManager TextureManager = nil
+
 	levelData := data.LevelData{
 		Map: [][]int{
 			{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
@@ -621,8 +625,8 @@ func Test_RendererCalculateVerticalCollision(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			config := NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0)
-			r := NewRenderer(config, &game, data.LevelData{})
+			config := config.NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0)
+			r := NewRenderer(config, &game, tManager, data.LevelData{})
 
 			got := r.computeVerticalCollision(tc.pX, tc.pY, tc.rAngle)
 
@@ -685,6 +689,7 @@ func Test_RendererCalculateHorizontalCollision(t *testing.T) {
 		},
 	}
 	game := game.NewGame(levelData, nil)
+	var tManager TextureManager = nil
 
 	testCases := []struct {
 		name     string
@@ -1171,8 +1176,8 @@ func Test_RendererCalculateHorizontalCollision(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			config := NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0)
-			r := NewRenderer(config, &game, data.LevelData{})
+			config := config.NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0)
+			r := NewRenderer(config, &game, tManager, data.LevelData{})
 
 			got := r.computeHorizontalCollision(tc.pX, tc.pY, tc.rAngle)
 
