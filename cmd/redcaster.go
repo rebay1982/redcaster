@@ -39,7 +39,7 @@ func main() {
 		Width:     renderConfiguration.GetFbWidth(),
 		Height:    renderConfiguration.GetFbHeight(),
 		Resizable: true,
-		VSync:     true,
+		VSync:     false,
 	}
 
 	// Update goroutine.
