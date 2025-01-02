@@ -1,6 +1,7 @@
 package render
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/rebay1982/redcaster/internal/config"
@@ -26,6 +27,7 @@ type Renderer struct {
 	ambientLight  float64
 	// TODO: Create a rendering memory manager
 	textureManager TextureManager
+	metrics *fpsMetrics // Needs to be, and a pointer, else we're always recreating a new instance on Draw.
 }
 
 // NewRenderer The game is a pointer because we want updates (from game) to the player position to be accessible.
@@ -35,6 +37,7 @@ func NewRenderer(config config.RenderConfiguration, gMngr GameManager, tMngr Tex
 		config:       config,
 		frameBuffer:  make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize()),
 		ambientLight: levelData.AmbientLight,
+		metrics: &fpsMetrics{},
 	}
 	r.precomputeRayAngleOffsets()
 	r.textureManager = tMngr
@@ -359,6 +362,12 @@ func (r *Renderer) clearFrameBuffer() {
 
 // Draw draws the game to the frame buffer.
 func (r Renderer) Draw() []uint8 {
+	r.metrics.start()
+	defer func() {
+		r.metrics.stop()
+		fmt.Printf("\rFPS: %.2f  ", r.metrics.getValue())
+	}()
+
 	//r.clearFrameBuffer()
 	r.drawFloor()
 
