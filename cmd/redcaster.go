@@ -17,12 +17,14 @@ import (
 )
 
 func main() {
-	// CPU profiling
-	f, _ := os.Create("cpu.prof")
-	pprof.StartCPUProfile(f)
-	defer pprof.StopCPUProfile()
-
 	appConfig := config.GetAppConfiguration()
+
+	// CPU profiling
+	if appConfig.Profile {
+		f, _ := os.Create("cpu.prof")
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 
 	loader := data.NewDataLoader()
 	levelData, err := loader.LoadLevelData(appConfig.DataFile)
@@ -67,7 +69,9 @@ func main() {
 	rp.Run()
 
 	// Memory profile
-	f, _ = os.Create("mem.prof")
-	pprof.WriteHeapProfile(f)
-	f.Close()
+	if appConfig.Profile {
+		f, _ := os.Create("mem.prof")
+		pprof.WriteHeapProfile(f)
+		f.Close()
+	}
 }

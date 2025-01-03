@@ -16,6 +16,7 @@ type AppConfig struct {
 	WindowTitle  string
 	RenderConfig RenderConfiguration
 	DataFile     string
+	Profile      bool
 }
 
 func GetAppConfiguration() AppConfig {
@@ -24,12 +25,15 @@ func GetAppConfiguration() AppConfig {
 	height := flag.Int("h", WINDOW_HEIGHT, "Window height in pixels.")
 	fov := flag.Float64("fov", FOV, "Field of view in degrees.")
 	file := flag.String("f", DATA_FILE, "File containing game data.")
+	displayFps := flag.Bool("fps", false, "Enable FPS display.")
+	profile := flag.Bool("p", false, "Enable CPU profiling.")
 
 	flag.Parse()
 
 	return AppConfig{
 		WindowTitle:  WINDOW_TITLE,
-		RenderConfig: NewRenderConfiguration(*width, *height, *fov),
+		RenderConfig: NewRenderConfiguration(*width, *height, *fov, *displayFps),
 		DataFile:     *file,
+		Profile:      *profile,
 	}
 }

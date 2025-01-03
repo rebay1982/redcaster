@@ -6,13 +6,16 @@ type RenderConfiguration struct {
 	fieldOfView       float64
 	textureMapping    bool
 	skyTextureMapping bool
+
+	displayFps bool
 }
 
-func NewRenderConfiguration(width, height int, fov float64) RenderConfiguration {
+func NewRenderConfiguration(width, height int, fov float64, displayFps bool) RenderConfiguration {
 	return RenderConfiguration{
 		fbWidth:     width,
 		fbHeight:    height,
 		fieldOfView: fov,
+		displayFps:  displayFps,
 	}
 }
 
@@ -54,4 +57,8 @@ func (r *RenderConfiguration) EnableSkyTextureMapping() {
 
 func (r *RenderConfiguration) DisableSkyTextureMapping() {
 	r.skyTextureMapping = false
+}
+
+func (r *RenderConfiguration) IsDisplayFpsEnabled() bool {
+	return r.displayFps
 }
