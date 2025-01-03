@@ -26,3 +26,8 @@ go.work.sum
 
 # Binary
 redcaster
+
+# Profiling
+profile/
+cpu.prof
+mem.prof

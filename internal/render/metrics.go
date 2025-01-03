@@ -5,10 +5,10 @@ import (
 )
 
 type fpsMetrics struct {
-	startTime time.Time
-	metricsSum int
+	startTime    time.Time
+	metricsSum   int
 	metricsIndex int
-	metrics [100]int
+	metrics      [100]int
 }
 
 func (m *fpsMetrics) start() {
@@ -26,7 +26,7 @@ func (m *fpsMetrics) update(delta int) {
 	m.metricsSum -= m.metrics[m.metricsIndex]
 
 	m.metrics[m.metricsIndex] = delta
-	
+
 	m.metricsIndex = (m.metricsIndex + 1) % len(m.metrics)
 }
 

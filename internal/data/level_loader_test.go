@@ -23,7 +23,6 @@ func Test_DataLoader_DecodeLevelDataFile(t *testing.T) {
 					{1, 0, 1},
 					{1, 1, 1},
 				},
-				TextureMapping:   false,
 				TextureFilenames: []string{},
 				AmbientLight:     0.5,
 				PlayerCoordData: PlayerCoordData{
@@ -61,7 +60,6 @@ func Test_DataLoader_DecodeLevelDataFile(t *testing.T) {
 					{1, 0, 1},
 					{1, 1, 1},
 				},
-				TextureMapping: true,
 				TextureFilenames: []string{
 					"../../assets/test/test-black-pixel.png",
 				},

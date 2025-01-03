@@ -30,8 +30,7 @@ func (dl DataLoader) decodeLevelDataFile(content []byte) (LevelData, error) {
 		return loadedData, err
 	}
 
-	loadedData.TextureMapping = len(loadedData.TextureFilenames) > 0
-	if loadedData.TextureMapping {
+	if len(loadedData.TextureFilenames) > 0 {
 		tl := NewTextureLoader()
 
 		loadedData.Textures, err = tl.LoadTextureData(loadedData.TextureFilenames)
@@ -39,21 +38,19 @@ func (dl DataLoader) decodeLevelDataFile(content []byte) (LevelData, error) {
 			return loadedData, err
 		}
 
-		if loadedData.SkyTextureFilename != "" {
-			skyTexture, err := tl.LoadTextureData([]string{loadedData.SkyTextureFilename})
-			if err != nil {
-				return loadedData, err
-			}
-
-			// Copy over the texture if we found one.
-			if len(skyTexture) > 0 {
-				loadedData.SkyTexture = skyTexture[0]
-			}
-		}
 	}
+	if loadedData.SkyTextureFilename != "" {
+		tl := NewTextureLoader()
 
-	if loadedData.TextureMapping {
+		skyTexture, err := tl.LoadTextureData([]string{loadedData.SkyTextureFilename})
+		if err != nil {
+			return loadedData, err
+		}
 
+		// Copy over the texture if we found one.
+		if len(skyTexture) > 0 {
+			loadedData.SkyTexture = skyTexture[0]
+		}
 	}
 
 	return loadedData, nil

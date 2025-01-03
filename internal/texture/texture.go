@@ -2,6 +2,7 @@ package texture
 
 import (
 	"fmt"
+	"unsafe"
 
 	"github.com/rebay1982/redcaster/internal/config"
 	"github.com/rebay1982/redcaster/internal/data"
@@ -94,17 +95,15 @@ func (tm TextureManager) GetSkyTextureVertical(rAngle float64) []uint8 {
 			vertBuffIndex := y << 2
 			texIndex := (horizontalTexPosition + y*skyTexData.Width) << 2
 
-			skyVertBuffer[vertBuffIndex] = skyTex[texIndex]
-			skyVertBuffer[vertBuffIndex+1] = skyTex[texIndex+1]
-			skyVertBuffer[vertBuffIndex+2] = skyTex[texIndex+2]
-			skyVertBuffer[vertBuffIndex+3] = skyTex[texIndex+3]
+			sTexSrc := (*uint32)(unsafe.Pointer(&skyTex[texIndex]))
+			sTexVertBuffDst := (*uint32)(unsafe.Pointer(&skyVertBuffer[vertBuffIndex]))
+
+			*sTexVertBuffDst = *sTexSrc
 		}
 	} else {
 		for y := 0; y < len(skyVertBuffer); y += 4 {
-			skyVertBuffer[y] = 0x00
-			skyVertBuffer[y+1] = 0x00
-			skyVertBuffer[y+2] = 0xAA
-			skyVertBuffer[y+3] = 0xFF
+			sTexVertBuffDst := (*uint32)(unsafe.Pointer(&skyVertBuffer[y]))
+			*sTexVertBuffDst = 0xFFAA0000
 		}
 	}
 
@@ -114,21 +113,21 @@ func (tm TextureManager) GetSkyTextureVertical(rAngle float64) []uint8 {
 func (tm TextureManager) GetTextureVertical(textureId int, renderHeight int, texColumnCoord float64) []uint8 {
 	texVertBuffer := tm.textureVerticalBuffer
 
-	// Get texture data
-	texture := tm.textureData[textureId-1]
-	texHeight := texture.Height
-	texWidth := texture.Width
-	texColumn := int(float64(texWidth) * texColumnCoord)
-
-	// Sampling ratio for the texture to texture vertical buffer
-	texToTexVertBufferSampleRatio := float64(texHeight) / float64(renderHeight)
-
 	fullRH := renderHeight
 	halfRH := fullRH >> 1
 	fullTBH := len(texVertBuffer) >> 2
 	halfTBH := fullTBH >> 1
 
 	if tm.config.IsTextureMappingEnabled() {
+		// Get texture data
+		texture := tm.textureData[textureId-1]
+		texHeight := texture.Height
+		texWidth := texture.Width
+		texColumn := int(float64(texWidth) * texColumnCoord)
+
+		// Sampling ratio for the texture to texture vertical buffer
+		texToTexVertBufferSampleRatio := float64(texHeight) / float64(renderHeight)
+
 		// Samples the center of the vertical to outer edges. This way seems convoluted but actually simplifies the
 		//	calculations quite a lot and always samples correctly whether the wall height to sample is smaller or larger than
 		//  the frame buffer height (larger happens when the player is close up against a wall).
@@ -145,17 +144,17 @@ func (tm TextureManager) GetTextureVertical(textureId int, renderHeight int, tex
 			// Sample from texture and write to texture vertical buffer.
 			texPixIndex := (texColumn + (textureRowNeg * texWidth)) << 2
 			tvbPixIndex := tvbIndexNeg << 2
-			texVertBuffer[tvbPixIndex] = texture.Data[texPixIndex]
-			texVertBuffer[tvbPixIndex+1] = texture.Data[texPixIndex+1]
-			texVertBuffer[tvbPixIndex+2] = texture.Data[texPixIndex+2]
-			texVertBuffer[tvbPixIndex+3] = texture.Data[texPixIndex+3]
+
+			texSrc := (*uint32)(unsafe.Pointer(&texture.Data[texPixIndex]))
+			texVertBuffDst := (*uint32)(unsafe.Pointer(&texVertBuffer[tvbPixIndex]))
+			*texVertBuffDst = *texSrc
 
 			texPixIndex = (texColumn + (textureRowPos * texWidth)) << 2
 			tvbPixIndex = tvbIndexPos << 2
-			texVertBuffer[tvbPixIndex] = texture.Data[texPixIndex]
-			texVertBuffer[tvbPixIndex+1] = texture.Data[texPixIndex+1]
-			texVertBuffer[tvbPixIndex+2] = texture.Data[texPixIndex+2]
-			texVertBuffer[tvbPixIndex+3] = texture.Data[texPixIndex+3]
+
+			texSrc = (*uint32)(unsafe.Pointer(&texture.Data[texPixIndex]))
+			texVertBuffDst = (*uint32)(unsafe.Pointer(&texVertBuffer[tvbPixIndex]))
+			*texVertBuffDst = *texSrc
 		}
 	} else {
 		for i := 0; i < halfRH && i < halfTBH; i++ {
@@ -164,16 +163,12 @@ func (tm TextureManager) GetTextureVertical(textureId int, renderHeight int, tex
 
 			// Sample from texture and write to texture vertical buffer.
 			tvbPixIndex := tvbIndexNeg << 2
-			texVertBuffer[tvbPixIndex] = 0xCC
-			texVertBuffer[tvbPixIndex+1] = 0xCC
-			texVertBuffer[tvbPixIndex+2] = 0xCC
-			texVertBuffer[tvbPixIndex+3] = 0xFF
+			texVertBuffDst := (*uint32)(unsafe.Pointer(&texVertBuffer[tvbPixIndex]))
+			*texVertBuffDst = 0xFFCCCCCC
 
 			tvbPixIndex = tvbIndexPos << 2
-			texVertBuffer[tvbPixIndex] = 0xCC
-			texVertBuffer[tvbPixIndex+1] = 0xCC
-			texVertBuffer[tvbPixIndex+2] = 0xCC
-			texVertBuffer[tvbPixIndex+3] = 0xFF
+			texVertBuffDst = (*uint32)(unsafe.Pointer(&texVertBuffer[tvbPixIndex]))
+			*texVertBuffDst = 0xFFCCCCCC
 		}
 	}
 	return texVertBuffer
