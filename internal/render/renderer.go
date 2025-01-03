@@ -38,10 +38,13 @@ func NewRenderer(config config.RenderConfiguration, gMngr GameManager, tMngr Tex
 		config:       config,
 		frameBuffer:  make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize()),
 		ambientLight: levelData.AmbientLight,
-		metrics:      &fpsMetrics{},
 	}
 	r.precomputeRayAngleOffsets()
 	r.textureManager = tMngr
+
+	if config.IsDisplayFpsEnabled() {
+		r.metrics = &fpsMetrics{}
+	}
 
 	return r
 }
@@ -50,6 +53,10 @@ func (r *Renderer) ReconfigureRenderer(config config.RenderConfiguration) {
 	r.config = config
 	r.frameBuffer = make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize())
 	r.precomputeRayAngleOffsets()
+
+	if config.IsDisplayFpsEnabled() {
+		r.metrics = &fpsMetrics{}
+	}
 
 	r.textureManager.Reconfigure(config)
 }
@@ -375,11 +382,14 @@ func (r *Renderer) clearFrameBuffer() {
 
 // Draw draws the game to the frame buffer.
 func (r Renderer) Draw() []uint8 {
-	r.metrics.start()
-	defer func() {
-		r.metrics.stop()
-		fmt.Printf("\rFPS: %.2f  ", r.metrics.getValue())
-	}()
+	// Only measure and display FPS if it's enabled
+	if r.config.IsDisplayFpsEnabled() {
+		r.metrics.start()
+		defer func() {
+			r.metrics.stop()
+			fmt.Printf("\rFPS: %.2f  ", r.metrics.getValue())
+		}()
+	}
 
 	//r.clearFrameBuffer()
 	r.drawFloor()
