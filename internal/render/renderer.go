@@ -3,6 +3,7 @@ package render
 import (
 	"fmt"
 	"math"
+	"unsafe"
 
 	"github.com/rebay1982/redcaster/internal/config"
 	"github.com/rebay1982/redcaster/internal/data"
@@ -27,7 +28,7 @@ type Renderer struct {
 	ambientLight  float64
 	// TODO: Create a rendering memory manager
 	textureManager TextureManager
-	metrics *fpsMetrics // Needs to be, and a pointer, else we're always recreating a new instance on Draw.
+	metrics        *fpsMetrics // Needs to be, and a pointer, else we're always recreating a new instance on Draw.
 }
 
 // NewRenderer The game is a pointer because we want updates (from game) to the player position to be accessible.
@@ -37,7 +38,7 @@ func NewRenderer(config config.RenderConfiguration, gMngr GameManager, tMngr Tex
 		config:       config,
 		frameBuffer:  make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize()),
 		ambientLight: levelData.AmbientLight,
-		metrics: &fpsMetrics{},
+		metrics:      &fpsMetrics{},
 	}
 	r.precomputeRayAngleOffsets()
 	r.textureManager = tMngr
@@ -67,8 +68,13 @@ func (r *Renderer) precomputeRayAngleOffsets() {
 	}
 }
 
-func (r Renderer) applyLightingEffects(colorComponent uint8) uint8 {
-	return uint8(float64(colorComponent) * r.ambientLight)
+func (r Renderer) applyLightingEffects(colorComponent uint32) uint32 {
+	R := uint32(float64(colorComponent&0xFF) * r.ambientLight)
+	G := uint32(float64(colorComponent>>8&0xFF) * r.ambientLight)
+	B := uint32(float64(colorComponent>>16&0xFF) * r.ambientLight)
+	A := colorComponent >> 24 & 0xFF
+
+	return A<<24 | B<<16 | G<<8 | R
 }
 
 /*
@@ -298,7 +304,7 @@ func (r Renderer) computeWallRenderingDetails(x int) wallRenderingDetail {
 func (r Renderer) drawVertical(x int) {
 	renderingDetails := r.computeWallRenderingDetails(x)
 	h := renderingDetails.wallHeight
-	o := renderingDetails.wallOrientation
+	//o := renderingDetails.wallOrientation
 	tId := renderingDetails.wallTextureId
 	tCoord := renderingDetails.rayCollisionTextureCoordinate
 
@@ -315,14 +321,20 @@ func (r Renderer) drawVertical(x int) {
 
 		// Texture pixels need to be drawn from bottom up because of flipped OpenGL coordinate system.
 		//	(0, 0) is bottom left in OpenGL vs being top left in more intuitive coordinate systems.
-		fbPixIndex := (x + (r.config.GetFbHeight()-1-y)*r.config.GetFbWidth()) << 2
+		fbIndex := (x + (r.config.GetFbHeight()-1-y)*r.config.GetFbWidth()) << 2
 		textureIndex := y << 2
 
-		// We devide by two if the orientation is a vertical wall.
-		r.frameBuffer[fbPixIndex] = r.applyLightingEffects(textureVertical[textureIndex] >> o)
-		r.frameBuffer[fbPixIndex+1] = r.applyLightingEffects(textureVertical[textureIndex+1] >> o)
-		r.frameBuffer[fbPixIndex+2] = r.applyLightingEffects(textureVertical[textureIndex+2] >> o)
-		r.frameBuffer[fbPixIndex+3] = textureVertical[textureIndex+3]
+		sTexSrc := (*uint32)(unsafe.Pointer(&textureVertical[textureIndex]))
+		fbDst := (*uint32)(unsafe.Pointer(&r.frameBuffer[fbIndex]))
+
+		*fbDst = r.applyLightingEffects(*sTexSrc)
+
+		// TODO: Add filter to restore the orientation shading effect
+		//// We devide by two if the orientation is a vertical wall.
+		//r.frameBuffer[fbIndex] = r.applyLightingEffects(textureVertical[textureIndex] >> o)
+		//r.frameBuffer[fbIndex+1] = r.applyLightingEffects(textureVertical[textureIndex+1] >> o)
+		//r.frameBuffer[fbIndex+2] = r.applyLightingEffects(textureVertical[textureIndex+2] >> o)
+		//r.frameBuffer[fbIndex+3] = textureVertical[textureIndex+3]
 	}
 }
 
@@ -330,13 +342,15 @@ func (r Renderer) drawCeiling(x int) {
 	rAngle := r.computeRayAngle(x)
 	skyVertTexture := r.textureManager.GetSkyTextureVertical(rAngle)
 	halfHeight := r.config.GetFbHeight() >> 1
+
 	for y := r.config.GetFbHeight() - 1; y >= halfHeight; y-- {
 		skyTexIndex := ((r.config.GetFbHeight() - 1) - y) << 2
 		fbIndex := (x + y*r.config.GetFbWidth()) << 2
-		r.frameBuffer[fbIndex] = skyVertTexture[skyTexIndex]
-		r.frameBuffer[fbIndex+1] = skyVertTexture[skyTexIndex+1]
-		r.frameBuffer[fbIndex+2] = skyVertTexture[skyTexIndex+2]
-		r.frameBuffer[fbIndex+3] = skyVertTexture[skyTexIndex+3]
+
+		sTexSrc := (*uint32)(unsafe.Pointer(&skyVertTexture[skyTexIndex]))
+		fbDst := (*uint32)(unsafe.Pointer(&r.frameBuffer[fbIndex]))
+
+		*fbDst = *sTexSrc
 	}
 }
 
@@ -344,11 +358,10 @@ func (r Renderer) drawFloor() {
 	height := r.config.GetFbHeight() >> 1
 	for x := 0; x < r.config.GetFbWidth(); x++ {
 		for y := height; y >= 0; y-- {
-			colorIndex := (x + y*r.config.GetFbWidth()) * 4
-			r.frameBuffer[colorIndex] = r.applyLightingEffects(0x33)
-			r.frameBuffer[colorIndex+1] = r.applyLightingEffects(0x33)
-			r.frameBuffer[colorIndex+2] = r.applyLightingEffects(0x33)
-			r.frameBuffer[colorIndex+3] = 0xFF // Alpha
+			fbIndex := (x + y*r.config.GetFbWidth()) << 2
+
+			fbDst := (*uint32)(unsafe.Pointer(&r.frameBuffer[fbIndex]))
+			*fbDst = r.applyLightingEffects(0xFF333333)
 		}
 	}
 }

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"runtime/pprof"
 	"time"
 
 	"github.com/rebay1982/redcaster/internal/config"
@@ -16,6 +17,11 @@ import (
 )
 
 func main() {
+	// CPU profiling
+	f, _ := os.Create("cpu.prof")
+	pprof.StartCPUProfile(f)
+	defer pprof.StopCPUProfile()
+
 	appConfig := config.GetAppConfiguration()
 
 	loader := data.NewDataLoader()
@@ -59,4 +65,9 @@ func main() {
 
 	rp.Init(winConfig, renderer.Draw, inputHandler.HandleInputEvent)
 	rp.Run()
+
+	// Memory profile
+	f, _ = os.Create("mem.prof")
+	pprof.WriteHeapProfile(f)
+	f.Close()
 }
