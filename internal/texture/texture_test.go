@@ -16,7 +16,7 @@ func Test_RendererValidateSkyTextureConfiguration(t *testing.T) {
 	}{
 		{
 			name:   "valid_texture",
-			config: config.NewRenderConfiguration(100, 50, 90.0),
+			config: config.NewRenderConfiguration(100, 50, 90.0, false),
 			skyTextureData: []data.TextureData{
 				{
 					Width:  100,
@@ -28,7 +28,7 @@ func Test_RendererValidateSkyTextureConfiguration(t *testing.T) {
 		},
 		{
 			name:   "invalid_texture_height",
-			config: config.NewRenderConfiguration(100, 200, 90.0),
+			config: config.NewRenderConfiguration(100, 200, 90.0, false),
 			skyTextureData: []data.TextureData{
 				{
 					Width:  100,
@@ -40,7 +40,7 @@ func Test_RendererValidateSkyTextureConfiguration(t *testing.T) {
 		},
 		{
 			name:   "invalid_texture_width",
-			config: config.NewRenderConfiguration(100, 50, 90.0),
+			config: config.NewRenderConfiguration(100, 50, 90.0, false),
 			skyTextureData: []data.TextureData{
 				{
 					Width:  123,

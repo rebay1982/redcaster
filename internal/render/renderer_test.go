@@ -84,7 +84,7 @@ func Test_RendererCalculateRayAngle(t *testing.T) {
 				},
 			}
 			game := game.NewGame(levelData, nil)
-			config := config.NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, tc.fov)
+			config := config.NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, tc.fov, false)
 			r := NewRenderer(config, &game, tManager, levelData)
 
 			got := r.computeRayAngle(tc.screenColumn)
@@ -625,7 +625,7 @@ func Test_RendererCalculateVerticalCollision(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			config := config.NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0)
+			config := config.NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0, false)
 			r := NewRenderer(config, &game, tManager, data.LevelData{})
 
 			got := r.computeVerticalCollision(tc.pX, tc.pY, tc.rAngle)
@@ -1176,7 +1176,7 @@ func Test_RendererCalculateHorizontalCollision(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			config := config.NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0)
+			config := config.NewRenderConfiguration(FB_WIDTH, FB_HEIGHT, 64.0, false)
 			r := NewRenderer(config, &game, tManager, data.LevelData{})
 
 			got := r.computeHorizontalCollision(tc.pX, tc.pY, tc.rAngle)

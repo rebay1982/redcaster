@@ -26,12 +26,13 @@ type Renderer struct {
 	frameBuffer   []uint8
 	rAngleOffsets []float64
 	ambientLight  float64
+
 	// TODO: Create a rendering memory manager
 	textureManager TextureManager
-	metrics        *fpsMetrics // Needs to be, and a pointer, else we're always recreating a new instance on Draw.
+	metrics        *fpsMetrics
 }
 
-// NewRenderer The game is a pointer because we want updates (from game) to the player position to be accessible.
+// NewRenderer Created a new renderer with a configuration, managers, and level data.
 func NewRenderer(config config.RenderConfiguration, gMngr GameManager, tMngr TextureManager, levelData data.LevelData) *Renderer {
 	r := &Renderer{
 		gameManager:  gMngr,
@@ -49,6 +50,8 @@ func NewRenderer(config config.RenderConfiguration, gMngr GameManager, tMngr Tex
 	return r
 }
 
+// ReconfigureRenderer Reconfigures the renderer based on the new config, but keeps previously injected managers and
+// level data.
 func (r *Renderer) ReconfigureRenderer(config config.RenderConfiguration) {
 	r.config = config
 	r.frameBuffer = make([]uint8, config.ComputeFrameBufferSize(), config.ComputeFrameBufferSize())
@@ -61,6 +64,8 @@ func (r *Renderer) ReconfigureRenderer(config config.RenderConfiguration) {
 	r.textureManager.Reconfigure(config)
 }
 
+// precomputeRayAngleOffsets precomputes the angle offsets for the rays, ensuring a linear wall sampling distance
+// between every screen column and avoids Moiree artifacts.
 func (r *Renderer) precomputeRayAngleOffsets() {
 	fov := r.config.GetFieldOfView()
 	r.rAngleOffsets = make([]float64, r.config.GetFbWidth())
@@ -75,6 +80,7 @@ func (r *Renderer) precomputeRayAngleOffsets() {
 	}
 }
 
+// applyLightingEffects applies ambient lighting to the pixel.
 func (r Renderer) applyLightingEffects(colorComponent uint32) uint32 {
 	R := uint32(float64(colorComponent&0xFF) * r.ambientLight)
 	G := uint32(float64(colorComponent>>8&0xFF) * r.ambientLight)
@@ -345,6 +351,7 @@ func (r Renderer) drawVertical(x int) {
 	}
 }
 
+// drawFloor draws the ceiling to the framebuffer for the specified column.
 func (r Renderer) drawCeiling(x int) {
 	rAngle := r.computeRayAngle(x)
 	skyVertTexture := r.textureManager.GetSkyTextureVertical(rAngle)
@@ -361,27 +368,30 @@ func (r Renderer) drawCeiling(x int) {
 	}
 }
 
-func (r Renderer) drawFloor() {
+// drawFloor draws the floor to the framebuffer for the specified column.
+func (r Renderer) drawFloor(x int) {
 	height := r.config.GetFbHeight() >> 1
-	for x := 0; x < r.config.GetFbWidth(); x++ {
-		for y := height; y >= 0; y-- {
-			fbIndex := (x + y*r.config.GetFbWidth()) << 2
+	for y := height; y >= 0; y-- {
+		fbIndex := (x + y*r.config.GetFbWidth()) << 2
 
-			fbDst := (*uint32)(unsafe.Pointer(&r.frameBuffer[fbIndex]))
-			*fbDst = r.applyLightingEffects(0xFF333333)
-		}
+		fbDst := (*uint32)(unsafe.Pointer(&r.frameBuffer[fbIndex]))
+		*fbDst = r.applyLightingEffects(0xFF333333)
 	}
 }
 
+// clearFrameBuffer Clears the framebuffer to 0x00
 func (r *Renderer) clearFrameBuffer() {
+
+	// Not necessary anymore since we draw every pixel on screen (ceiling, walls, and floor)
 	r.frameBuffer[0] = 0x00
 	for i := 1; i < len(r.frameBuffer); i = i << 1 {
 		copy(r.frameBuffer[i:], r.frameBuffer[:i])
 	}
 }
 
-// Draw draws the game to the frame buffer.
+// Draw draws the scene to the frame buffer and returns it.
 func (r Renderer) Draw() []uint8 {
+
 	// Only measure and display FPS if it's enabled
 	if r.config.IsDisplayFpsEnabled() {
 		r.metrics.start()
@@ -391,11 +401,9 @@ func (r Renderer) Draw() []uint8 {
 		}()
 	}
 
-	//r.clearFrameBuffer()
-	r.drawFloor()
 
-	// Draw walls
 	for x := 0; x < r.config.GetFbWidth(); x++ {
+		r.drawFloor(x)
 		r.drawCeiling(x)
 		r.drawVertical(x)
 	}
